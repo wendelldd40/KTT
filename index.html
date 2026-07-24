@@ -122,7 +122,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON, { realtime:{ params:{ event
 const S = {
   screen:'publico', user:null, isAdmin:false, loading:true,
   jogadores:[], ranking:[], etapas:[], etapa:null, partidas:[], mesas:[], grupos:[], resultados:[],
-  setsAtuais:[], setsMap:{}, arbLog:[], perfilId:null, cat:'Geral', busca:'', etapaSel:null, arbPartida:null, modal:null, toast:null,
+  setsAtuais:[], setsMap:{}, arbLog:[], perfilId:null, cat:'Geral', busca:'', etapaSel:null, arbPartida:null, chaveCat:'A', editChave:false, modal:null, toast:null,
 };
 const CATS = ['Geral','A','B','C','D'];
 const FASES = { grupo:'Fase de grupos', oitavas:'Oitavas', quartas:'Quartas', semifinal:'Semifinal', final:'Final', disputa3:'Disputa de 3º' };
@@ -728,31 +728,80 @@ function telaMesas(){
 }
 
 /* ---------- GRUPOS ---------- */
+function classificacaoGrupo(g){
+  const ids = (g.grupo_jogadores || []).map(x => x.jogador_id);
+  return ids.map(id => {
+    const ps = S.partidas.filter(p => p.grupo_id === g.id && p.status === 'finalizada' && [p.jogador_a,p.jogador_b].includes(id));
+    let v = 0, d = 0, ss = 0;
+    ps.forEach(p => {
+      const meuA = p.jogador_a === id;
+      ss += (meuA ? p.sets_a - p.sets_b : p.sets_b - p.sets_a);
+      if(p.vencedor_id === id) v++; else d++;
+    });
+    return { id, v, d, ss, jogos: ps.length };
+  }).sort((a,b) => b.v - a.v || b.ss - a.ss || nome(a.id).localeCompare(nome(b.id)));
+}
+function classificadosDaCategoria(cat){
+  return S.grupos.filter(g => g.categoria === cat)
+    .flatMap(g => classificacaoGrupo(g).slice(0, g.vagas || 2).map((x,i) => ({ ...x, grupo:g.nome, posGrupo:i+1 })));
+}
+
 function telaGrupos(){
-  if(!S.etapa) return vazio('Nenhuma etapa ativa','Ative uma etapa para montar os grupos.');
-  if(!S.grupos.length) return vazio('Grupos ainda não formados',
-    'Escolha uma categoria e o sistema distribui os inscritos em grupos equilibrados pelo ranking.',
-    S.isAdmin ? CATS.slice(1).map(c => `<button class="btn ${c==='A'?'pri':''}" data-act="gerarGrupos" data-cat="${c}" style="margin:0 4px">Gerar grupos · Cat. ${c}</button>`).join('') : '');
-  return `<div class="screen">
-    ${S.isAdmin ? `<div class="chips">${CATS.slice(1).map(c => `<button class="btn sm" data-act="gerarGrupos" data-cat="${c}">Regerar Cat. ${c}</button>`).join('')}</div>` : ''}
-    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">
+  if(!S.etapa) return vazio('Nenhuma etapa ativa','Ative uma etapa em Etapas para montar os grupos.');
+  const semGrupo = S.jogadores.filter(j => !S.grupos.some(g => (g.grupo_jogadores||[]).some(x => x.jogador_id === j.id)));
+
+  const barra = S.isAdmin ? `
+    <div class="card" style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:9px;align-items:center">
+      <button class="btn pri sm" data-act="novoGrupo">+ Criar grupo vazio</button>
+      <div style="width:1px;height:22px;background:var(--line2)"></div>
+      <span style="font-size:11.5px;color:var(--mut)">Sortear pelo ranking:</span>
+      ${['A','B','C','D'].map(c => `<button class="btn sm" data-act="gerarGrupos" data-cat="${c}">Cat. ${c}</button>`).join('')}
+    </div>` : '';
+
+  const painelSemGrupo = (S.isAdmin && semGrupo.length) ? `
+    <div class="card" style="margin-bottom:16px">
+      <div class="eyebrow" style="margin-bottom:10px">Fora de grupo — ${semGrupo.length} jogador(es)</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        ${semGrupo.map(j => `<button class="chip" data-act="escolherGrupoPara" data-id="${j.id}" style="display:inline-flex;gap:7px;align-items:center">
+          ${avatar(j,20,8)}${esc(j.nome)} <span style="color:var(--dim)">· ${esc(j.categoria)}</span> <span style="color:var(--accl)">+</span></button>`).join('')}
+      </div>
+    </div>` : '';
+
+  if(!S.grupos.length) return `<div class="screen">${barra}${painelSemGrupo}
+    ${vazio('Nenhum grupo montado','Crie os grupos na mão ou deixe o sistema sortear equilibrando pelo ranking.')}</div>`;
+
+  return `<div class="screen">${barra}${painelSemGrupo}
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(285px,1fr))">
       ${S.grupos.map(g => {
-        const ids = (g.grupo_jogadores || []).map(x => x.jogador_id);
-        const tab = ids.map(id => {
-          const ps = S.partidas.filter(p => p.grupo_id === g.id && p.status === 'finalizada' && [p.jogador_a,p.jogador_b].includes(id));
-          const v = ps.filter(p => p.vencedor_id === id).length;
-          return {id, v, d: ps.length - v};
-        }).sort((a,b) => b.v - a.v || a.d - b.d);
+        const tab = classificacaoGrupo(g);
+        const vagas = g.vagas || 2;
         return `<div class="card">
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-            <div class="exp" style="font-size:15px">${esc(g.nome)}</div>${tag('Cat. '+g.categoria,'var(--accl)','rgba(255,122,26,.12)')}</div>
-          ${tab.map((r,i) => `<div class="clickable" data-perfil="${r.id}" style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);cursor:pointer">
-            <div class="exp" style="width:18px;font-size:13px;color:${i<2?'var(--ok)':'var(--dim)'}">${i+1}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            ${S.isAdmin
+              ? `<input class="inp" value="${esc(g.nome)}" data-campo="nome" data-tabela="grupos" data-id="${g.id}" style="font-weight:800;font-size:14px;padding:6px 9px;border-color:transparent;background:transparent">`
+              : `<div class="exp" style="font-size:15px;flex:1">${esc(g.nome)}</div>`}
+            ${S.isAdmin ? `<button class="btn sm gh dg" data-act="excluirGrupo" data-id="${g.id}" title="Excluir grupo">×</button>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+            ${tag('Cat. '+g.categoria,'var(--accl)','rgba(255,122,26,.12)')}
+            <span style="font-size:11px;color:var(--mut)">${tab.length} jogadores</span>
+          </div>
+          ${tab.map((r,i) => `<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-top:1px solid var(--line)">
+            <div class="exp" style="width:16px;font-size:13px;color:${i<vagas?'var(--ok)':'var(--dim)'}">${i+1}</div>
             ${avatar(jog(r.id),28,10)}
-            <div style="flex:1;font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nome(r.id))}</div>
-            <div style="font-size:12px;color:var(--mut)"><span style="color:var(--ok)">${r.v}</span>/<span style="color:var(--bad)">${r.d}</span></div>
+            <div class="clickable" data-perfil="${r.id}" style="flex:1;font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">${esc(nome(r.id))}</div>
+            <div style="font-size:11.5px;color:var(--mut);white-space:nowrap"><span style="color:var(--ok)">${r.v}</span>/<span style="color:var(--bad)">${r.d}</span>${r.ss?` <span style="color:var(--dim)">${r.ss>0?'+':''}${r.ss}</span>`:''}</div>
+            ${S.isAdmin ? `<button class="btn sm gh" data-act="moverJogador" data-id="${r.id}" data-grupo="${g.id}" title="Mover para outro grupo" style="padding:3px 7px">⇄</button>
+            <button class="btn sm gh dg" data-act="tirarDoGrupo" data-id="${r.id}" data-grupo="${g.id}" title="Tirar do grupo" style="padding:3px 7px">×</button>` : ''}
           </div>`).join('')}
-          <div class="eyebrow" style="margin-top:10px">Os 2 primeiros avançam</div>
+          ${S.isAdmin ? `<button class="btn sm" style="width:100%;margin-top:10px" data-act="addAoGrupo" data-grupo="${g.id}">+ Adicionar jogador</button>` : ''}
+          <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+            <span class="eyebrow" style="flex:1">Classificam</span>
+            ${S.isAdmin
+              ? `<select class="inp" data-campo="vagas" data-tabela="grupos" data-id="${g.id}" style="width:auto;padding:4px 8px;font-size:12px">
+                  ${[1,2,3,4].map(n => `<option value="${n}" ${vagas===n?'selected':''}>${n} primeiro${n>1?'s':''}</option>`).join('')}</select>`
+              : `<span style="font-size:12px;color:var(--mut)">${vagas} primeiro${vagas>1?'s':''}</span>`}
+          </div>
         </div>`;
       }).join('')}
     </div>
@@ -761,34 +810,85 @@ function telaGrupos(){
 
 /* ---------- CHAVEAMENTO ---------- */
 function telaChaveamento(){
-  const ordemFase = ['oitavas','quartas','semifinal','final'];
-  const elim = S.partidas.filter(p => ordemFase.includes(p.fase));
-  const disputa3 = S.partidas.filter(p => p.fase === 'disputa3');
-  if(!elim.length) return vazio('Chaveamento ainda não gerado',
-    'Com a fase de grupos encerrada, gere a fase eliminatória a partir dos classificados.',
-    S.isAdmin ? CATS.slice(1).map(c => `<button class="btn ${c==='A'?'pri':''}" data-act="gerarChave" data-cat="${c}" style="margin:0 4px">Gerar chave · Cat. ${c}</button>`).join('') : '');
+  const ordemFase = ['oitavas','quartas','semifinal','final','disputa3'];
+  const cat = S.chaveCat || 'A';
+  const elim = S.partidas.filter(p => ordemFase.includes(p.fase) && p.categoria === cat);
+  const classificados = classificadosDaCategoria(cat);
+  const editando = S.editChave;
+
+  const chips = `<div class="chips">${['A','B','C','D'].map(c =>
+    `<button class="chip ${cat===c?'on':''}" data-chavecat="${c}">Categoria ${c}</button>`).join('')}</div>`;
+
+  const barra = S.isAdmin ? `
+    <div class="card" style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:9px;align-items:center">
+      <button class="btn pri sm" data-act="gerarChave" data-cat="${cat}">Gerar próxima fase pelos grupos</button>
+      <select class="inp" id="fase-nova" style="width:auto;padding:7px 10px;font-size:12.5px">
+        ${ordemFase.map(f => `<option value="${f}">${FASES[f]}</option>`).join('')}</select>
+      <button class="btn sm" data-act="addPartida" data-cat="${cat}">+ Partida em branco</button>
+      <div class="spacer"></div>
+      <button class="btn sm ${editando?'pri':''}" data-act="toggleEditChave">${editando?'✓ Concluir edição':'✎ Editar chave'}</button>
+    </div>` : '';
+
+  const painelClass = (S.isAdmin && classificados.length) ? `
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;margin-bottom:10px">
+        <div class="eyebrow" style="flex:1">Classificados da fase de grupos · Cat. ${esc(cat)}</div>
+        <span style="font-size:11px;color:var(--mut)">${classificados.length} atletas</span>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        ${classificados.map(c => `<span class="chip" style="display:inline-flex;gap:7px;align-items:center;border-color:rgba(47,191,113,.3)">
+          ${avatar(jog(c.id),20,8)}${esc(nome(c.id))}
+          <span style="color:var(--dim);font-size:10.5px">${esc(c.grupo)} · ${c.posGrupo}º</span></span>`).join('')}
+      </div>
+      <div style="font-size:11.5px;color:var(--mut);margin-top:10px">Gerar pelos grupos cruza 1º de um com 2º do outro. Se preferir outro cruzamento, use <b>Editar chave</b> e troque os nomes na mão.</div>
+    </div>` : '';
+
+  if(!elim.length) return `<div class="screen">${chips}${barra}${painelClass}
+    ${vazio('Chave da categoria '+cat+' ainda não montada',
+      'Você pode gerar automaticamente pelos classificados dos grupos ou criar partidas em branco e preencher os confrontos na mão.')}</div>`;
+
   const fases = ordemFase.filter(f => elim.some(p => p.fase === f));
-  const linha = p => {
+  const opcoesJogador = sel => `<option value="">— a definir —</option>` +
+    S.jogadores.map(j => `<option value="${j.id}" ${sel===j.id?'selected':''}>${esc(j.nome)}</option>`).join('');
+
+  const cartaoEdicao = p => `<div class="card" style="padding:11px;margin-bottom:10px">
+    <select class="inp" data-campo="jogador_a" data-tabela="partidas" data-id="${p.id}" style="font-size:12.5px;padding:7px 9px">${opcoesJogador(p.jogador_a)}</select>
+    <div style="text-align:center;font-size:10.5px;color:var(--dim);padding:4px 0">versus</div>
+    <select class="inp" data-campo="jogador_b" data-tabela="partidas" data-id="${p.id}" style="font-size:12.5px;padding:7px 9px">${opcoesJogador(p.jogador_b)}</select>
+    <div style="display:flex;gap:6px;margin-top:9px">
+      <select class="inp" data-campo="fase" data-tabela="partidas" data-id="${p.id}" style="font-size:11.5px;padding:6px 8px">
+        ${ordemFase.map(f => `<option value="${f}" ${p.fase===f?'selected':''}>${FASES[f]}</option>`).join('')}</select>
+      <select class="inp" data-campo="mesa_id" data-tabela="partidas" data-id="${p.id}" style="font-size:11.5px;padding:6px 8px">
+        <option value="">Sem mesa</option>
+        ${S.mesas.map(m => `<option value="${m.id}" ${p.mesa_id===m.id?'selected':''}>Mesa ${pad2(m.numero)}</option>`).join('')}</select>
+      <button class="btn sm gh dg" data-act="excluirPartida" data-id="${p.id}" title="Excluir partida">×</button>
+    </div>
+  </div>`;
+
+  const cartaoLeitura = p => {
     const venc = p.vencedor_id;
     const lado = (id, sets) => `<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;${venc===id?'background:rgba(255,122,26,.1)':''};border-radius:7px">
       ${avatar(jog(id),24,9)}
-      <div style="flex:1;min-width:0;font-size:12.5px;font-weight:${venc===id?700:500};color:${venc&&venc!==id?'var(--mut)':'var(--tx)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nome(id))}</div>
+      <div style="flex:1;min-width:0;font-size:12.5px;font-weight:${venc===id?700:500};color:${id?(venc&&venc!==id?'var(--mut)':'var(--tx)'):'var(--dim)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${id?esc(nome(id)):'a definir'}</div>
       <div class="exp" style="font-size:13px;color:${venc===id?'var(--accl)':'var(--dim)'}">${sets}</div></div>`;
+    const m = S.mesas.find(x => x.id === p.mesa_id);
     return `<div class="card" style="padding:8px;margin-bottom:10px;border-color:${p.status==='andamento'?'rgba(229,72,77,.3)':'var(--line)'}">
       ${lado(p.jogador_a, p.sets_a)}${lado(p.jogador_b, p.sets_b)}
-      ${p.status==='andamento' ? `<div class="live" style="padding:4px 9px"><span class="dot"></span>AO VIVO</div>` : ''}
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 9px 0">
+        ${p.status==='andamento' ? `<span class="live"><span class="dot"></span>AO VIVO</span>` : `<span style="font-size:10.5px;color:var(--dim)">${m?'Mesa '+pad2(m.numero):''}</span>`}
+        <div class="spacer"></div>
+        ${S.isAdmin && p.jogador_a && p.jogador_b && p.status!=='finalizada' ? `<button class="btn sm gh" data-act="arbitrar" data-id="${p.id}" style="padding:3px 8px;font-size:11px">Placar</button>` : ''}
+      </div>
     </div>`;
   };
-  return `<div class="screen">
+
+  return `<div class="screen">${chips}${barra}${painelClass}
     <div class="scroller"><div style="display:flex;gap:16px;min-width:min-content">
-      ${fases.map(f => `<div style="min-width:230px;flex:1">
+      ${fases.map(f => `<div style="min-width:245px;flex:1">
         <div class="eyebrow" style="margin-bottom:10px">${esc(FASES[f])}</div>
-        ${elim.filter(p => p.fase === f).map(linha).join('')}
+        ${elim.filter(p => p.fase === f).map(editando ? cartaoEdicao : cartaoLeitura).join('')}
       </div>`).join('')}
     </div></div>
-    ${disputa3.length ? `<div style="margin-top:18px;max-width:260px">
-      <div class="eyebrow" style="margin-bottom:10px">Disputa de 3º</div>${disputa3.map(linha).join('')}</div>` : ''}
-    ${S.isAdmin ? `<div class="chips" style="margin-top:18px">${CATS.slice(1).map(c => `<button class="btn sm" data-act="gerarChave" data-cat="${c}">Regerar chave · Cat. ${c}</button>`).join('')}</div>` : ''}
   </div>`;
 }
 
@@ -1017,14 +1117,7 @@ async function gerarChave(cat){
   if(!existentes.length){
     const gruposCat = S.grupos.filter(g => g.categoria === cat);
     if(gruposCat.length){
-      for(const g of gruposCat){
-        const ids = (g.grupo_jogadores||[]).map(x => x.jogador_id);
-        const tab = ids.map(id => {
-          const ps = daCat.filter(p => p.grupo_id === g.id && p.status === 'finalizada' && [p.jogador_a,p.jogador_b].includes(id));
-          return { id, v: ps.filter(p => p.vencedor_id === id).length };
-        }).sort((a,b) => b.v - a.v);
-        origem.push(...tab.slice(0,2).map(x => x.id));
-      }
+      origem = classificadosDaCategoria(cat).map(x => x.id);
     } else {
       origem = S.ranking.filter(r => r.categoria === cat).slice(0,8).map(r => r.id);
     }
@@ -1051,6 +1144,134 @@ async function gerarChave(cat){
   const { error } = await sb.from('partidas').insert(novas);
   if(error) return erro(error);
   await carregarEtapa(); irPara('chaveamento'); toast(`${FASES[fase]} gerada na categoria ${cat}.`);
+}
+
+
+
+/* ---------- upload de foto ---------- */
+function comprimirImagem(file, lado = 640){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const m = Math.min(img.width, img.height);
+      const c = document.createElement('canvas');
+      c.width = c.height = lado;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, (img.width - m)/2, (img.height - m)/2, m, m, 0, 0, lado, lado);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? resolve(b) : reject(new Error('Não consegui processar essa imagem.')), 'image/jpeg', 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Esse arquivo não parece ser uma imagem.')); };
+    img.src = url;
+  });
+}
+function capturarFormJogador(){
+  if(S.modal?.tipo !== 'jogador') return;
+  const d = S.modal.dados || (S.modal.dados = {});
+  ['nome','cidade','clube','categoria','estilo','mao','empunhadura','idade','bio','foto_url']
+    .forEach(k => { const el = $('#jf-'+k); if(el) d[k] = el.value; });
+}
+async function subirFoto(file){
+  if(!S.isAdmin) return toast('Só a organização pode enviar fotos.', true);
+  if(file.size > 12 * 1024 * 1024) return toast('Imagem muito pesada (máx. 12 MB).', true);
+  capturarFormJogador();
+  S.modal.enviando = true; renderOverlay();
+  try {
+    const blob = await comprimirImagem(file);
+    const caminho = `jogadores/${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`;
+    const { error } = await sb.storage.from('fotos').upload(caminho, blob, { contentType:'image/jpeg', cacheControl:'31536000' });
+    if(error) throw error;
+    const { data } = sb.storage.from('fotos').getPublicUrl(caminho);
+    S.modal.dados.foto_url = data.publicUrl;
+    S.modal.enviando = false; renderOverlay();
+    toast('Foto enviada. Salve o jogador para confirmar.');
+  } catch(err){
+    S.modal.enviando = false;
+    erro(err.message?.includes('Bucket') ? new Error('Bucket "fotos" não existe — rode o storage-fotos.sql no Supabase.') : err);
+  }
+}
+
+/* ---------- edição manual de grupos ---------- */
+async function sincronizarPartidasGrupo(gid){
+  const g = S.grupos.find(x => x.id === gid); if(!g) return;
+  const ids = (g.grupo_jogadores || []).map(x => x.jogador_id);
+  const existentes = S.partidas.filter(p => p.grupo_id === gid);
+  const orfas = existentes.filter(p => p.status !== 'finalizada' && (!ids.includes(p.jogador_a) || !ids.includes(p.jogador_b)));
+  if(orfas.length) await sb.from('partidas').delete().in('id', orfas.map(p => p.id));
+  const mantidas = existentes.filter(p => !orfas.some(o => o.id === p.id));
+  const novas = [];
+  for(let a=0;a<ids.length;a++) for(let b=a+1;b<ids.length;b++){
+    const ja = ids[a], jb = ids[b];
+    const jaExiste = mantidas.some(p => (p.jogador_a===ja && p.jogador_b===jb) || (p.jogador_a===jb && p.jogador_b===ja));
+    if(!jaExiste) novas.push({ etapa_id:S.etapa.id, grupo_id:gid, categoria:g.categoria, fase:'grupo',
+      jogador_a:ja, jogador_b:jb, ordem: mantidas.length + novas.length });
+  }
+  if(novas.length) await sb.from('partidas').insert(novas);
+}
+async function criarGrupo(cat, nome){
+  const n = S.grupos.filter(g => g.categoria === cat).length;
+  const { error } = await sb.from('grupos').insert({
+    etapa_id:S.etapa.id, categoria:cat, ordem:S.grupos.length,
+    nome: nome || `Grupo ${String.fromCharCode(65+n)} · Cat. ${cat}` });
+  if(error) return erro(error);
+  S.modal = null; await carregarEtapa(); render(); toast('Grupo criado. Agora adicione os jogadores.');
+}
+async function excluirGrupo(id){
+  await sb.from('partidas').delete().eq('grupo_id',id).neq('status','finalizada');
+  await sb.from('partidas').update({ grupo_id:null }).eq('grupo_id',id);
+  const { error } = await sb.from('grupos').delete().eq('id',id);
+  if(error) return erro(error);
+  await carregarEtapa(); render(); toast('Grupo excluído.');
+}
+async function addAoGrupo(gid, jid){
+  const { error } = await sb.from('grupo_jogadores').insert({ grupo_id:gid, jogador_id:jid });
+  if(error) return erro(error);
+  await carregarEtapa(); await sincronizarPartidasGrupo(gid);
+  S.modal = null; await carregarEtapa(); render(); toast(`${nome(jid)} entrou no grupo.`);
+}
+async function tirarDoGrupo(gid, jid){
+  const temJogo = S.partidas.some(p => p.grupo_id === gid && p.status === 'finalizada' && [p.jogador_a,p.jogador_b].includes(jid));
+  if(temJogo) return toast('Esse jogador já tem partida finalizada no grupo — apague o resultado antes de tirá-lo.', true);
+  const { error } = await sb.from('grupo_jogadores').delete().eq('grupo_id',gid).eq('jogador_id',jid);
+  if(error) return erro(error);
+  await carregarEtapa(); await sincronizarPartidasGrupo(gid);
+  await carregarEtapa(); render(); toast('Jogador retirado do grupo.');
+}
+async function moverJogador(jid, origem, destino){
+  const temJogo = S.partidas.some(p => p.grupo_id === origem && p.status === 'finalizada' && [p.jogador_a,p.jogador_b].includes(jid));
+  if(temJogo) return toast('Esse jogador já tem partida finalizada no grupo atual — apague o resultado antes de movê-lo.', true);
+  await sb.from('grupo_jogadores').delete().eq('grupo_id',origem).eq('jogador_id',jid);
+  const { error } = await sb.from('grupo_jogadores').insert({ grupo_id:destino, jogador_id:jid });
+  if(error) return erro(error);
+  await carregarEtapa();
+  await sincronizarPartidasGrupo(origem); await sincronizarPartidasGrupo(destino);
+  S.modal = null; await carregarEtapa(); render(); toast(`${nome(jid)} movido de grupo.`);
+}
+
+/* ---------- edição manual da chave ---------- */
+async function addPartida(cat){
+  const fase = $('#fase-nova')?.value || 'semifinal';
+  const { error } = await sb.from('partidas').insert({
+    etapa_id:S.etapa.id, categoria:cat, fase, status:'proxima', ordem: 10 + S.partidas.length });
+  if(error) return erro(error);
+  S.editChave = true; await carregarEtapa(); render(); toast('Partida criada. Escolha os dois jogadores.');
+}
+async function excluirPartida(id){
+  const p = S.partidas.find(x => x.id === id);
+  if(p?.status === 'finalizada') return toast('Partida já finalizada. Apague o resultado antes de excluí-la.', true);
+  const { error } = await sb.from('partidas').delete().eq('id',id);
+  if(error) return erro(error);
+  await carregarEtapa(); render(); toast('Partida excluída.');
+}
+async function atualizarCampo(tabela, id, campo, valor){
+  const num = ['vagas','ordem','numero','melhor_de'];
+  const v = valor === '' ? null : (num.includes(campo) ? parseInt(valor,10) : valor);
+  const { error } = await sb.from(tabela).update({ [campo]: v }).eq('id',id);
+  if(error) return erro(error);
+  if(tabela === 'grupos'){ await carregarEtapa(); if(campo !== 'nome') render(); }
+  else { await carregarEtapa(); render(); }
 }
 
 /* ---------- etapas ---------- */
@@ -1117,7 +1338,19 @@ function renderOverlay(){
       <div style="height:10px"></div>
       <div style="display:flex;gap:10px"><div style="flex:1">${campo('estilo','Estilo', j.estilo)}</div><div style="flex:1">${campo('mao','Mão', j.mao)}</div></div>
       <div style="display:flex;gap:10px"><div style="flex:1">${campo('empunhadura','Empunhadura', j.empunhadura)}</div><div style="flex:1">${campo('idade','Idade', j.idade,'number')}</div></div>
-      ${campo('foto_url','Foto (URL)', j.foto_url)}
+      <label class="f">Foto do atleta</label>
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
+        <div class="av" style="width:66px;height:66px;font-size:20px;${j.foto_url ? `background-image:url('${esc(j.foto_url)}')` : `background:${esc(j.avatar_grad || 'linear-gradient(135deg,#2A3450,#1A2236)')}`}">${j.foto_url ? '' : esc(iniciais(j.nome || '?'))}</div>
+        <div style="flex:1;min-width:0">
+          <input type="file" id="jf-arquivo" accept="image/*" style="display:none">
+          <input type="hidden" id="jf-foto_url" value="${esc(j.foto_url || '')}">
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <button class="btn sm" data-act="escolherFoto" ${S.modal.enviando ? 'disabled' : ''}>${S.modal.enviando ? 'Enviando…' : (j.foto_url ? 'Trocar foto' : 'Escolher foto')}</button>
+            ${j.foto_url ? `<button class="btn sm gh dg" data-act="removerFoto">Remover</button>` : ''}
+          </div>
+          <div style="font-size:11px;color:var(--mut);margin-top:6px;line-height:1.4">No celular abre a câmera ou a galeria. A imagem é cortada em quadrado e reduzida sozinha.</div>
+        </div>
+      </div>
       <label class="f">Bio</label><textarea class="inp" id="jf-bio" rows="3">${esc(j.bio ?? '')}</textarea>
       <div style="display:flex;gap:9px;margin-top:20px">
         <button class="btn gh" data-act="fecharModal" style="flex:1">Cancelar</button>
@@ -1139,6 +1372,53 @@ function renderOverlay(){
       <div style="display:flex;gap:9px;margin-top:20px">
         <button class="btn gh" data-act="fecharModal" style="flex:1">Cancelar</button>
         <button class="btn pri" data-act="salvarEtapa" style="flex:1">Criar etapa</button></div>
+    </div></div>`;
+  }
+  if(S.modal?.tipo === 'novoGrupo'){
+    html += `<div class="modal" data-close><div class="box">
+      <h3>Criar grupo</h3>
+      <p style="font-size:13px;color:var(--mut);margin:0 0 18px">O grupo nasce vazio — você escolhe quem entra.</p>
+      <label class="f">Categoria</label>
+      <select class="inp" id="ng-cat">${['A','B','C','D'].map(c => `<option>${c}</option>`).join('')}</select>
+      <div style="height:12px"></div>
+      <label class="f">Nome (opcional)</label><input class="inp" id="ng-nome" placeholder="Grupo A · Cat. A">
+      <div style="display:flex;gap:9px;margin-top:20px">
+        <button class="btn gh" data-act="fecharModal" style="flex:1">Cancelar</button>
+        <button class="btn pri" data-act="criarGrupo" style="flex:1">Criar grupo</button></div>
+    </div></div>`;
+  }
+  if(S.modal?.tipo === 'addJogador'){
+    const g = S.grupos.find(x => x.id === S.modal.grupoId);
+    const dentro = (g?.grupo_jogadores || []).map(x => x.jogador_id);
+    const q = (S.buscaModal || '').toLowerCase();
+    const livres = S.jogadores.filter(j => !dentro.includes(j.id) && (!q || j.nome.toLowerCase().includes(q)));
+    html += `<div class="modal" data-close><div class="box">
+      <h3>Adicionar ao ${esc(g?.nome || 'grupo')}</h3>
+      <p style="font-size:13px;color:var(--mut);margin:0 0 14px">Toque no nome para incluir. Os jogos do grupo se atualizam sozinhos.</p>
+      <input class="inp" id="busca-modal" placeholder="Buscar jogador" value="${esc(S.buscaModal || '')}" autocomplete="off">
+      <div style="max-height:44vh;overflow:auto;margin-top:12px">
+        ${livres.length ? livres.map(j => `<button data-act="confirmarAddGrupo" data-id="${j.id}" data-grupo="${g.id}"
+          style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 6px;border-top:1px solid var(--line)">
+          ${avatar(j,30,11)}<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">${esc(j.nome)}</div>
+          <div style="font-size:11px;color:var(--mut)">${esc(j.clube || j.cidade || '')} · Cat. ${esc(j.categoria)}</div></div>
+          <span style="color:var(--accl);font-size:17px">+</span></button>`).join('')
+        : `<div style="color:var(--mut);font-size:13px;padding:14px 0">Nenhum jogador disponível com esse nome.</div>`}
+      </div>
+      <button class="btn gh" data-act="fecharModal" style="width:100%;margin-top:16px">Fechar</button>
+    </div></div>`;
+  }
+  if(S.modal?.tipo === 'escolherGrupo'){
+    const destinos = S.grupos.filter(g => g.id !== S.modal.origem);
+    html += `<div class="modal" data-close><div class="box">
+      <h3>Mover ${esc(nome(S.modal.jid))}</h3>
+      <p style="font-size:13px;color:var(--mut);margin:0 0 14px">Escolha o grupo de destino.</p>
+      ${destinos.length ? destinos.map(g => `<button data-act="confirmarMover" data-id="${S.modal.jid}" data-grupo="${g.id}" data-origem="${S.modal.origem || ''}"
+        style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 6px;border-top:1px solid var(--line)">
+        <div style="flex:1"><div style="font-size:13.5px;font-weight:600">${esc(g.nome)}</div>
+        <div style="font-size:11px;color:var(--mut)">${(g.grupo_jogadores||[]).length} jogadores · Cat. ${esc(g.categoria)}</div></div>
+        <span style="color:var(--accl)">→</span></button>`).join('')
+      : `<div style="color:var(--mut);font-size:13px;padding:10px 0">Não há outro grupo. Crie um primeiro.</div>`}
+      <button class="btn gh" data-act="fecharModal" style="width:100%;margin-top:16px">Cancelar</button>
     </div></div>`;
   }
   if(S.toast) html += `<div class="toast" style="border-color:${S.toast.erro?'rgba(229,72,77,.5)':'var(--line2)'};color:${S.toast.erro?'#FF9A9C':'var(--tx)'}">${esc(S.toast.msg)}</div>`;
@@ -1186,6 +1466,7 @@ document.addEventListener('click', async e => {
   }
   if(el.dataset.etapa){ S.etapaSel = el.dataset.etapa; await carregarResultados(el.dataset.etapa); return render(); }
   if(el.dataset.cat && !el.dataset.act){ S.cat = el.dataset.cat; return render(); }
+  if(el.dataset.chavecat){ S.chaveCat = el.dataset.chavecat; return render(); }
 
   const a = el.dataset.act, id = el.dataset.id;
   const acoes = {
@@ -1194,7 +1475,7 @@ document.addEventListener('click', async e => {
     fazerLogin:       () => entrar($('#lg-email').value.trim(), $('#lg-senha').value),
     sair:             () => sair(),
     novoJogador:      () => { S.modal = {tipo:'jogador', dados:{}}; renderOverlay(); },
-    editarJogador:    () => { S.modal = {tipo:'jogador', dados: jog(id) || {}}; renderOverlay(); },
+    editarJogador:    () => { S.modal = {tipo:'jogador', dados: {...(jog(id) || {})}}; renderOverlay(); },
     salvarJogador:    () => salvarJogador(id || null),
     novaEtapa:        () => { S.modal = {tipo:'etapa'}; renderOverlay(); },
     salvarEtapa:      () => salvarEtapa(),
@@ -1212,12 +1493,40 @@ document.addEventListener('click', async e => {
     finalizarPartida: () => acaoFinalizarPartida(id),
     salvarPlacar:     () => acaoSalvarPlacar(id),
     liberarMesa:      () => acaoLiberarMesa(id),
+    novoGrupo:        () => { S.modal = {tipo:'novoGrupo'}; renderOverlay(); },
+    criarGrupo:       () => criarGrupo($('#ng-cat').value, $('#ng-nome').value.trim()),
+    excluirGrupo:     () => excluirGrupo(id),
+    addAoGrupo:       () => { S.modal = {tipo:'addJogador', grupoId: el.dataset.grupo}; S.buscaModal=''; renderOverlay(); },
+    confirmarAddGrupo:() => addAoGrupo(el.dataset.grupo, id),
+    tirarDoGrupo:     () => tirarDoGrupo(el.dataset.grupo, id),
+    moverJogador:     () => { S.modal = {tipo:'escolherGrupo', jid:id, origem: el.dataset.grupo}; renderOverlay(); },
+    escolherGrupoPara:() => { S.modal = {tipo:'escolherGrupo', jid:id, origem:null}; renderOverlay(); },
+    confirmarMover:   () => moverJogador(id, el.dataset.origem || null, el.dataset.grupo),
+    addPartida:       () => addPartida(el.dataset.cat),
+    excluirPartida:   () => excluirPartida(id),
+    toggleEditChave:  () => { S.editChave = !S.editChave; render(); },
+    escolherFoto:     () => { $('#jf-arquivo')?.click(); },
+    removerFoto:      () => { capturarFormJogador(); S.modal.dados.foto_url = ''; renderOverlay(); },
   };
   if(acoes[a]) await acoes[a]();
 });
 
 document.addEventListener('input', e => {
   if(e.target.id === 'busca'){ S.busca = e.target.value; renderView(); $('#busca')?.focus(); }
+  if(e.target.id === 'busca-modal'){
+    S.buscaModal = e.target.value; const pos = e.target.selectionStart;
+    renderOverlay(); const c = $('#busca-modal'); if(c){ c.focus(); c.setSelectionRange(pos,pos); }
+  }
+});
+document.addEventListener('change', async e => {
+  if(e.target.id === 'jf-arquivo'){
+    const f = e.target.files?.[0];
+    if(f) await subirFoto(f);
+    return;
+  }
+  const el = e.target.closest('[data-campo][data-tabela][data-id]');
+  if(!el || !S.isAdmin) return;
+  await atualizarCampo(el.dataset.tabela, el.dataset.id, el.dataset.campo, el.value);
 });
 document.addEventListener('keydown', e => {
   if(e.key === 'Enter' && S.modal === 'login') entrar($('#lg-email').value.trim(), $('#lg-senha').value);
