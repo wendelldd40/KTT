@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KTT Irecê · Circuito de Tênis de Mesa</title>
+<meta name="theme-color" content="#0B0F17">
+<meta name="description" content="Ranking, etapas e placar ao vivo do circuito de tênis de mesa de Irecê e região.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62.5..125,400..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0F17; --panel:rgba(255,255,255,.03); --panel2:rgba(255,255,255,.05);
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.12);
+  --tx:#E8ECF4; --mut:#8A94A8; --dim:#5C6577;
+  --acc:#FF7A1A; --acc2:#FF4D1C; --accl:#FFB077;
+  --ok:#2FBF71; --bad:#E5484D; --blue:#7EA0FF; --gold:#FFB224;
+  --r:12px; --nav:240px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);font-family:Archivo,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{background:radial-gradient(1200px 600px at 80% -10%,rgba(255,122,26,.07),transparent 60%),var(--bg);min-height:100vh}
+a{color:var(--acc);text-decoration:none}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:#232B3D;border-radius:8px}::-webkit-scrollbar-track{background:transparent}
+.exp{font-stretch:112%;font-weight:800;letter-spacing:.01em}
+.eyebrow{font-size:10px;color:var(--dim);letter-spacing:.16em;text-transform:uppercase}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- SHELL ---------- */
+.app{display:flex;min-height:100vh}
+aside{width:var(--nav);flex:none;border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:3px;position:sticky;top:0;height:100vh;background:rgba(11,15,23,.72);backdrop-filter:blur(12px);overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px}
+.mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;box-shadow:0 4px 16px rgba(255,122,26,.35);flex:none}
+.navitem{padding:9px 11px;border-radius:9px;font-size:13px;color:var(--mut);font-weight:500;border-left:2px solid transparent;display:flex;gap:9px;align-items:center;transition:all .15s;width:100%;text-align:left}
+.navitem:hover{background:var(--panel2);color:var(--tx)}
+.navitem.on{font-weight:700;color:var(--accl);background:linear-gradient(90deg,rgba(255,122,26,.14),rgba(255,122,26,.02));border-left-color:var(--acc)}
+.navgroup{font-size:10px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;padding:14px 10px 6px}
+main{flex:1;min-width:0;padding:0 26px 80px}
+.topbar{position:sticky;top:0;z-index:20;background:rgba(11,15,23,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);margin:0 -26px 22px;padding:16px 26px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.topbar h1{font-size:19px;margin:0;font-stretch:112%;font-weight:800}
+.topbar .sub{font-size:12px;color:var(--mut);margin-top:2px}
+.spacer{flex:1}
+.bottomnav{display:none}
+
+/* ---------- ELEMENTOS ---------- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.grid{display:grid;gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.kpi .v{font-size:26px;font-weight:800;font-stretch:112%;line-height:1.1;margin-top:6px}
+.btn{padding:9px 15px;border-radius:9px;background:var(--panel2);border:1px solid var(--line2);font-size:13px;font-weight:600;transition:.15s}
+.btn:hover{background:rgba(255,255,255,.09)}
+.btn.pri{background:linear-gradient(135deg,var(--acc),var(--acc2));border-color:transparent;color:#fff;box-shadow:0 4px 18px rgba(255,122,26,.28)}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.gh{background:transparent}
+.btn.sm{padding:6px 11px;font-size:12px}
+.btn.dg{color:#FF9A9C;border-color:rgba(229,72,77,.3)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.chip{padding:7px 14px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--line2);color:var(--mut);background:transparent;white-space:nowrap}
+.chip.on{background:rgba(255,122,26,.14);border-color:rgba(255,122,26,.45);color:var(--accl)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.inp{width:100%;padding:10px 13px;border-radius:9px;background:rgba(255,255,255,.04);border:1px solid var(--line2);font-size:13px;outline:none}
+.inp:focus{border-color:rgba(255,122,26,.5);box-shadow:0 0 0 3px rgba(255,122,26,.1)}
+label.f{display:block;font-size:11px;color:var(--mut);margin:0 0 5px;letter-spacing:.04em}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex:none;background-size:cover;background-position:center}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:10px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;padding:0 12px 10px;font-weight:600}
+td{padding:12px;border-top:1px solid var(--line);font-size:13.5px;vertical-align:middle}
+tr.clickable:hover td{background:rgba(255,255,255,.03);cursor:pointer}
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.empty{padding:40px 20px;text-align:center;color:var(--mut);font-size:13.5px}
+.empty b{display:block;color:var(--tx);font-size:15px;margin-bottom:6px;font-weight:700}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:200;background:#1A2236;border:1px solid var(--line2);padding:12px 18px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:fadeUp .2s}
+.modal{position:fixed;inset:0;z-index:150;background:rgba(5,8,14,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal .box{background:#101623;border:1px solid var(--line2);border-radius:16px;padding:22px;width:100%;max-width:440px;max-height:88vh;overflow:auto;animation:fadeUp .18s}
+.modal h3{margin:0 0 4px;font-size:17px;font-stretch:112%;font-weight:800}
+.live{display:inline-flex;align-items:center;gap:6px;color:var(--bad);font-size:11px;font-weight:800;letter-spacing:.1em}
+.live .dot{background:var(--bad);animation:pulse 1.4s infinite}
+.screen{animation:fadeUp .25s}
+
+/* ---------- MOBILE ---------- */
+@media (max-width:860px){
+  aside{display:none}
+  main{padding:0 14px 96px}
+  .topbar{margin:0 -14px 16px;padding:12px 14px}
+  .topbar h1{font-size:16px}
+  .bottomnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:rgba(11,15,23,.94);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:8px 4px calc(8px + env(safe-area-inset-bottom))}
+  .bottomnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;color:var(--mut);font-weight:600;padding:4px 2px}
+  .bottomnav button .ic{font-size:17px;line-height:1}
+  .bottomnav button.on{color:var(--accl)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside id="sidebar"></aside>
+  <main>
+    <div class="topbar" id="topbar"></div>
+    <div id="view"></div>
+  </main>
+</div>
+<nav class="bottomnav" id="bottomnav"></nav>
+<div id="overlay"></div>
+<script type="module">
+/* ============================================================
+   KTT IRECÊ — app v1
+   CONFIGURE AQUI as duas linhas abaixo (Supabase > Project Settings > API)
+   ============================================================ */
+const SUPABASE_URL  = 'https://SEU-PROJETO.supabase.co';
+const SUPABASE_ANON  = 'SUA_CHAVE_ANON_AQUI';
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON, { realtime:{ params:{ eventsPerSecond:8 } } });
+
+/* ---------- estado ---------- */
+const S = {
+  screen:'publico', user:null, isAdmin:false, loading:true,
+  jogadores:[], ranking:[], etapas:[], etapa:null, partidas:[], mesas:[], grupos:[], resultados:[],
+  setsAtuais:[], setsMap:{}, arbLog:[], perfilId:null, cat:'Geral', busca:'', etapaSel:null, arbPartida:null, modal:null, toast:null,
+};
+const CATS = ['Geral','A','B','C','D'];
+const FASES = { grupo:'Fase de grupos', oitavas:'Oitavas', quartas:'Quartas', semifinal:'Semifinal', final:'Final', disputa3:'Disputa de 3º' };
+const STATUS_PARTIDA = {
+  proxima:    {l:'Próxima',    c:'#7EA0FF', bg:'rgba(126,160,255,.12)'},
+  aguardando: {l:'Aguardando', c:'#FFB224', bg:'rgba(255,178,36,.12)'},
+  chamando:   {l:'Chamando',   c:'#FF7A1A', bg:'rgba(255,122,26,.16)'},
+  andamento:  {l:'Em andamento',c:'#E5484D',bg:'rgba(229,72,77,.14)'},
+  finalizada: {l:'Finalizada', c:'#2FBF71', bg:'rgba(47,191,113,.12)'},
+};
+const STATUS_MESA = {
+  livre:{l:'Livre',c:'#8A94A8'}, aguardando:{l:'Aguardando',c:'#FFB224'},
+  partida:{l:'Em partida',c:'#E5484D'}, finalizada:{l:'Finalizada',c:'#2FBF71'},
+};
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iniciais = n => (n||'?').trim().split(/\s+/).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+const jog = id => S.jogadores.find(j => j.id === id) || null;
+const nome = id => jog(id)?.nome || '—';
+const dataBR = d => d ? new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const pad2 = n => String(n).padStart(2,'0');
+const aprov = (v,d) => (v+d) ? Math.round(v*100/(v+d)) : 0;
+
+function avatar(j, size=38, fs=13){
+  if(!j) return `<div class="av" style="width:${size}px;height:${size}px;background:#232B3D"></div>`;
+  const bg = j.foto_url ? `background-image:url('${esc(j.foto_url)}')` : `background:${esc(j.avatar_grad||'#232B3D')}`;
+  return `<div class="av" style="width:${size}px;height:${size}px;font-size:${fs}px;${bg}">${j.foto_url?'':esc(iniciais(j.nome))}</div>`;
+}
+function tag(txt, cor, bg){ return `<span class="tag" style="color:${cor};background:${bg||'rgba(255,255,255,.05)'}">${esc(txt)}</span>`; }
+
+function toast(msg, erro=false){
+  S.toast = {msg, erro}; renderOverlay();
+  clearTimeout(toast._t); toast._t = setTimeout(()=>{ S.toast=null; renderOverlay(); }, 3200);
+}
+function erro(e){ console.error(e); toast(e?.message || 'Não deu pra salvar. Tente de novo.', true); }
+
+/* ---------- carregamento ---------- */
+async function carregarTudo(){
+  const [rk, et] = await Promise.all([
+    sb.from('ranking').select('*').order('posicao'),
+    sb.from('etapas').select('*').order('temporada',{ascending:false}).order('numero',{ascending:false}),
+  ]);
+  const jg = await sb.from('jogadores').select('*').eq('ativo',true).order('nome');
+  S.ranking = rk.data || []; S.etapas = et.data || []; S.jogadores = jg.data || [];
+  S.etapa = S.etapas.find(e => e.status === 'em_andamento') || S.etapas[0] || null;
+  if(!S.etapaSel) S.etapaSel = S.etapa?.id || null;
+  await carregarEtapa();
+  S.loading = false;
+}
+async function carregarEtapa(){
+  const id = S.etapa?.id; if(!id){ S.partidas=[]; S.mesas=[]; S.grupos=[]; return; }
+  const [p, m, g] = await Promise.all([
+    sb.from('partidas').select('*').eq('etapa_id',id).order('ordem'),
+    sb.from('mesas').select('*').eq('etapa_id',id).order('numero'),
+    sb.from('grupos').select('*, grupo_jogadores(jogador_id)').eq('etapa_id',id).order('ordem'),
+  ]);
+  S.partidas = p.data || []; S.mesas = m.data || []; S.grupos = g.data || [];
+}
+async function carregarResultados(etapaId){
+  const r = await sb.from('resultados_etapa').select('*').eq('etapa_id',etapaId).order('posicao');
+  S.resultados = r.data || [];
+}
+async function carregarSets(partidaId){
+  const r = await sb.from('sets').select('*').eq('partida_id',partidaId).order('numero');
+  S.setsAtuais = r.data || [];
+}
+
+/* ---------- auth ---------- */
+async function checarSessao(){
+  const { data:{ session } } = await sb.auth.getSession();
+  S.user = session?.user || null;
+  if(S.user){
+    const { data } = await sb.from('admins').select('papel').eq('user_id',S.user.id).maybeSingle();
+    S.isAdmin = !!data;
+    if(!S.isAdmin) toast('Login feito, mas esta conta ainda não é administradora.');
+  } else S.isAdmin = false;
+}
+async function entrar(email, senha){
+  const { error } = await sb.auth.signInWithPassword({ email, password:senha });
+  if(error) return erro(error);
+  await checarSessao(); S.modal = null; irPara(S.isAdmin ? 'dashboard' : 'publico'); toast('Bem-vindo de volta.');
+}
+async function sair(){ await sb.auth.signOut(); S.user=null; S.isAdmin=false; irPara('publico'); toast('Sessão encerrada.'); }
+
+/* ---------- telas / rotas ---------- */
+const TELAS = {
+  publico:      {t:'Ao vivo',            s:'Acompanhe as partidas em tempo real', ic:'◍', pub:true,  grupo:'Circuito'},
+  ranking:      {t:'Ranking',            s:'Classificação geral do circuito',     ic:'▲', pub:true,  grupo:'Circuito'},
+  jogadores:    {t:'Jogadores',          s:'Atletas do circuito',                 ic:'◉', pub:true,  grupo:'Circuito'},
+  etapas:       {t:'Etapas',             s:'Calendário e resultados',             ic:'◆', pub:true,  grupo:'Circuito'},
+  estatisticas: {t:'Estatísticas',       s:'Recordes e números da temporada',     ic:'∿', pub:true,  grupo:'Circuito'},
+  perfil:       {t:'Perfil do jogador',  s:'',                                    ic:'◉', pub:true,  oculto:true},
+  dashboard:    {t:'Dashboard',          s:'Visão geral da organização',          ic:'◈', grupo:'Organização'},
+  grupos:       {t:'Grupos',             s:'Fase de grupos da etapa',             ic:'▦', grupo:'Organização'},
+  chaveamento:  {t:'Chaveamento',        s:'Fase eliminatória',                   ic:'⑃', grupo:'Organização'},
+  placar:       {t:'Placar',             s:'Registrar resultado de partida',      ic:'◳', grupo:'Organização'},
+  evento:       {t:'Dashboard do evento',s:'Como está o dia da etapa',            ic:'◎', grupo:'Dia do evento'},
+  arbitro:      {t:'Árbitro',            s:'Marcação ponto a ponto',              ic:'⏱', grupo:'Dia do evento'},
+  chamadas:     {t:'Central de chamadas',s:'Quem joga agora e a seguir',          ic:'≣', grupo:'Dia do evento'},
+  mesas:        {t:'Mesas',              s:'Ocupação das mesas',                  ic:'▤', grupo:'Dia do evento'},
+};
+const MOBILE_NAV_PUB   = ['publico','ranking','jogadores','etapas','estatisticas'];
+const MOBILE_NAV_ADMIN = ['evento','arbitro','chamadas','ranking','publico'];
+
+function irPara(tela, extra){
+  if(TELAS[tela] && !TELAS[tela].pub && !S.isAdmin) tela = 'publico';
+  S.screen = tela;
+  if(extra?.perfilId) S.perfilId = extra.perfilId;
+  location.hash = '#/' + tela + (extra?.perfilId ? '/' + extra.perfilId : '');
+  window.scrollTo(0,0);
+  render();
+}
+function lerHash(){
+  const [, tela, id] = (location.hash || '').split('/');
+  if(tela && TELAS[tela]){ S.screen = tela; if(id) S.perfilId = id; }
+}
+
+/* ---------- navegação ---------- */
+function renderNav(){
+  const telas = Object.entries(TELAS).filter(([k,v]) => !v.oculto && (v.pub || S.isAdmin));
+  const grupos = [...new Set(telas.map(([,v]) => v.grupo))];
+  let html = `<div class="brand">
+      <div class="mark exp">KT</div>
+      <div><div class="exp" style="font-size:14px">KTT IRECÊ</div>
+      <div class="eyebrow" style="margin-top:2px">Circuito de Tênis de Mesa</div></div>
+    </div>`;
+  for(const g of grupos){
+    html += `<div class="navgroup">${esc(g)}</div>`;
+    for(const [k,v] of telas.filter(([,x]) => x.grupo === g)){
+      html += `<button class="navitem ${S.screen===k?'on':''}" data-go="${k}"><span style="width:14px">${v.ic}</span>${esc(v.t)}</button>`;
+    }
+  }
+  html += `<div style="flex:1"></div><div style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px">`;
+  if(S.user){
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:0 8px 12px">
+      <div class="av" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg,#2A3450,#1A2236);color:#9FB0CC">${esc(iniciais(S.user.email))}</div>
+      <div style="min-width:0"><div style="font-size:12px;font-weight:600">${S.isAdmin?'Organização':'Visitante'}</div>
+      <div style="font-size:10px;color:var(--mut);overflow:hidden;text-overflow:ellipsis">${esc(S.user.email)}</div></div></div>
+      <button class="btn sm gh" style="width:100%" data-act="sair">Sair</button>`;
+  } else {
+    html += `<button class="btn sm pri" style="width:100%" data-act="login">Entrar como organização</button>`;
+  }
+  $('#sidebar').innerHTML = html + '</div>';
+
+  const mob = (S.isAdmin ? MOBILE_NAV_ADMIN : MOBILE_NAV_PUB);
+  $('#bottomnav').innerHTML = mob.map(k =>
+    `<button class="${S.screen===k?'on':''}" data-go="${k}"><span class="ic">${TELAS[k].ic}</span>${esc(TELAS[k].t.split(' ')[0])}</button>`
+  ).join('');
+}
+
+function renderTopbar(){
+  const t = TELAS[S.screen] || TELAS.publico;
+  const emAndamento = S.partidas.some(p => p.status === 'andamento');
+  let acoes = '';
+  if(S.screen === 'jogadores' && S.isAdmin) acoes = `<button class="btn pri sm" data-act="novoJogador">+ Novo jogador</button>`;
+  if(S.screen === 'etapas' && S.isAdmin) acoes = `<button class="btn pri sm" data-act="novaEtapa">+ Nova etapa</button>`;
+  $('#topbar').innerHTML = `
+    <div style="min-width:0">
+      <h1>${esc(t.t)}</h1>
+      ${t.s ? `<div class="sub">${esc(t.s)}</div>` : ''}
+    </div>
+    <div class="spacer"></div>
+    ${emAndamento ? `<span class="live"><span class="dot"></span>AO VIVO</span>` : ''}
+    ${S.etapa ? `<span class="chip" style="cursor:default">${esc(S.etapa.nome || 'Etapa '+S.etapa.numero)} · ${esc(S.etapa.cidade||'')}</span>` : ''}
+    ${acoes}`;
+}
+
+/* ============================================================
+   TELAS
+   ============================================================ */
+function vazio(titulo, texto, botao){
+  return `<div class="card empty"><b>${esc(titulo)}</b>${esc(texto)}${botao?`<div style="margin-top:14px">${botao}</div>`:''}</div>`;
+}
+
+/* ---------- AO VIVO (página pública) ---------- */
+function telaPublico(){
+  const aoVivo = S.partidas.filter(p => p.status === 'andamento');
+  const proximas = S.partidas.filter(p => ['chamando','aguardando','proxima'].includes(p.status)).slice(0,6);
+  const feitas = S.partidas.filter(p => p.status === 'finalizada').slice(-6).reverse();
+  const top = S.ranking.slice(0,5);
+
+  const cardAoVivo = p => {
+    const mesa = S.mesas.find(m => m.id === p.mesa_id);
+    return `<div class="card" style="background:linear-gradient(160deg,rgba(229,72,77,.09),var(--panel));border-color:rgba(229,72,77,.28)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <span class="live"><span class="dot"></span>AO VIVO</span>
+        <span style="font-size:11.5px;color:var(--mut)">${mesa?'Mesa '+pad2(mesa.numero)+' · ':''}${esc(FASES[p.fase])} · Cat. ${esc(p.categoria)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+          ${avatar(jog(p.jogador_a),54,18)}
+          <div style="font-weight:700;font-size:14px">${esc(nome(p.jogador_a))}</div>
+        </div>
+        <div style="text-align:center">
+          <div class="exp" style="font-size:44px;line-height:1">${p.sets_a} <span style="color:var(--dim)">×</span> ${p.sets_b}</div>
+          <div class="eyebrow" style="margin-top:4px">sets · melhor de ${p.melhor_de}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+          ${avatar(jog(p.jogador_b),54,18)}
+          <div style="font-weight:700;font-size:14px">${esc(nome(p.jogador_b))}</div>
+        </div>
+      </div>
+      ${chipsSets(p)}
+    </div>`;
+  };
+
+  return `<div class="screen grid" style="gap:18px">
+    ${aoVivo.length ? aoVivo.map(cardAoVivo).join('')
+      : vazio('Nenhuma partida acontecendo agora','Quando o árbitro iniciar uma partida, o placar aparece aqui automaticamente.')}
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:12px">A seguir</div>
+        ${proximas.length ? proximas.map(p => {
+          const m = S.mesas.find(x => x.id === p.mesa_id), st = STATUS_PARTIDA[p.status];
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:600">${esc(nome(p.jogador_a))} <span style="color:var(--dim)">×</span> ${esc(nome(p.jogador_b))}</div>
+              <div style="font-size:11px;color:var(--mut);margin-top:2px">${m?'Mesa '+pad2(m.numero)+' · ':''}${esc(FASES[p.fase])} · Cat. ${esc(p.categoria)}</div>
+            </div>${tag(st.l, st.c, st.bg)}</div>`;
+        }).join('') : `<div style="color:var(--mut);font-size:13px;padding:8px 0">Nada agendado no momento.</div>`}
+      </div>
+
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:12px">Últimos resultados</div>
+        ${feitas.length ? feitas.map(p => `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px"><b>${esc(nome(p.vencedor_id))}</b> venceu ${esc(nome(p.vencedor_id===p.jogador_a?p.jogador_b:p.jogador_a))}</div>
+              <div style="font-size:11px;color:var(--mut);margin-top:2px">${esc(FASES[p.fase])} · Cat. ${esc(p.categoria)}</div>
+            </div>
+            <div class="exp" style="font-size:16px;color:var(--ok)">${p.sets_a} × ${p.sets_b}</div>
+          </div>`).join('') : `<div style="color:var(--mut);font-size:13px;padding:8px 0">Ainda sem partidas encerradas.</div>`}
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;margin-bottom:12px"><div class="eyebrow">Top 5 do ranking</div>
+      <div class="spacer"></div><button class="btn sm gh" data-go="ranking">Ver ranking completo</button></div>
+      ${top.map(r => `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)">
+        <div class="exp" style="width:26px;font-size:15px;color:${r.posicao<=3?'var(--gold)':'var(--dim)'}">${r.posicao}</div>
+        ${avatar(r,34,12)}
+        <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">${esc(r.nome)}</div>
+        <div style="font-size:11px;color:var(--mut)">${esc(r.clube||r.cidade||'')}</div></div>
+        <div class="exp" style="font-size:15px;color:var(--accl)">${r.pontos}</div></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* ---------- RANKING ---------- */
+function telaRanking(){
+  const lista = S.cat === 'Geral' ? S.ranking : S.ranking.filter(r => r.categoria === S.cat);
+  return `<div class="screen">
+    <div class="chips">${CATS.map(c => `<button class="chip ${S.cat===c?'on':''}" data-cat="${c}">${c==='Geral'?'Geral':'Categoria '+c}</button>`).join('')}</div>
+    <div class="card" style="padding:16px 6px">
+      <div class="scroller"><table>
+        <thead><tr><th style="width:52px">#</th><th>Jogador</th><th>Cat.</th><th>Etapas</th><th>V / D</th><th>Aprov.</th><th style="text-align:right">Pontos</th></tr></thead>
+        <tbody>${lista.map((r,i) => `
+          <tr class="clickable" data-perfil="${r.id}">
+            <td><span class="exp" style="font-size:15px;color:${i<3?'var(--gold)':'var(--dim)'}">${S.cat==='Geral'?r.posicao:i+1}</span></td>
+            <td><div style="display:flex;align-items:center;gap:11px">${avatar(r,34,12)}
+              <div><div style="font-weight:600">${esc(r.nome)}</div>
+              <div style="font-size:11px;color:var(--mut)">${esc(r.clube||'')} ${r.cidade?'· '+esc(r.cidade):''}</div></div></div></td>
+            <td>${tag('Cat. '+r.categoria,'var(--accl)','rgba(255,122,26,.12)')}</td>
+            <td style="color:var(--mut)">${r.etapas_disputadas}</td>
+            <td><span style="color:var(--ok)">${r.vitorias}</span> <span style="color:var(--dim)">/</span> <span style="color:var(--bad)">${r.derrotas}</span></td>
+            <td style="color:var(--mut)">${aprov(r.vitorias,r.derrotas)}%</td>
+            <td style="text-align:right"><span class="exp" style="font-size:16px;color:var(--accl)">${r.pontos}</span></td>
+          </tr>`).join('')}</tbody>
+      </table></div>
+      ${!lista.length ? `<div class="empty">Nenhum jogador nesta categoria ainda.</div>` : ''}
+    </div>
+  </div>`;
+}
+
+/* ---------- JOGADORES ---------- */
+function telaJogadores(){
+  const q = S.busca.toLowerCase();
+  const lista = S.jogadores.filter(j =>
+    (S.cat === 'Geral' || j.categoria === S.cat) &&
+    (!q || j.nome.toLowerCase().includes(q) || (j.clube||'').toLowerCase().includes(q) || (j.cidade||'').toLowerCase().includes(q)));
+  return `<div class="screen">
+    <input class="inp" id="busca" placeholder="Buscar por nome, clube ou cidade" value="${esc(S.busca)}" style="max-width:420px;margin-bottom:16px">
+    <div class="chips">${CATS.map(c => `<button class="chip ${S.cat===c?'on':''}" data-cat="${c}">${c==='Geral'?'Todas':'Categoria '+c}</button>`).join('')}</div>
+    ${lista.length ? `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">
+      ${lista.map(j => {
+        const r = S.ranking.find(x => x.id === j.id);
+        return `<div class="card" data-perfil="${j.id}" style="cursor:pointer;display:flex;gap:12px;align-items:center">
+          ${avatar(j,46,16)}
+          <div style="min-width:0">
+            <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.nome)}</div>
+            <div style="font-size:11.5px;color:var(--mut);margin:2px 0 6px">${esc(j.clube || j.cidade || '')}</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              ${tag('Cat. '+j.categoria,'var(--accl)','rgba(255,122,26,.12)')}
+              <span style="font-size:11px;color:var(--mut)">${r?'#'+r.posicao+' · ':''}${j.pontos} pts</span>
+            </div>
+          </div></div>`;
+      }).join('')}</div>`
+    : vazio('Nenhum jogador encontrado', 'Ajuste a busca ou cadastre o primeiro atleta.',
+        S.isAdmin ? `<button class="btn pri" data-act="novoJogador">+ Novo jogador</button>` : '')}
+  </div>`;
+}
+
+/* ---------- PERFIL ---------- */
+function telaPerfil(){
+  const j = jog(S.perfilId);
+  if(!j) return vazio('Jogador não encontrado','Volte para a lista e escolha outro atleta.');
+  const r = S.ranking.find(x => x.id === j.id);
+  const radar = Array.isArray(j.radar) ? j.radar : [70,70,70,70,70];
+  const eixos = ['Ataque','Defesa','Saque','Consistência','Experiência'];
+  const hist = S.resultados.filter(x => x.jogador_id === j.id);
+  const cx=120, cy=115, R=88;
+  const pt = (i,v) => { const a = -Math.PI/2 + i*2*Math.PI/5, d = R*v/100; return [cx+d*Math.cos(a), cy+d*Math.sin(a)]; };
+  const poly = radar.map((v,i) => pt(i,v).join(',')).join(' ');
+  const grade = [25,50,75,100].map(g => `<polygon points="${eixos.map((_,i)=>pt(i,g).join(',')).join(' ')}" fill="none" stroke="rgba(255,255,255,.07)"/>`).join('');
+
+  return `<div class="screen grid" style="gap:16px">
+    <button class="btn sm gh" data-go="jogadores" style="justify-self:start">← Voltar para jogadores</button>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+      <div class="card" style="background:linear-gradient(165deg,rgba(255,122,26,.14),rgba(255,77,28,.04) 45%,var(--panel));border-color:rgba(255,122,26,.28)">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div class="eyebrow">KTT Irecê · Atleta</div>
+          <div class="exp" style="font-size:30px;color:rgba(255,255,255,.14)">${j.camisa??''}</div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:center;margin:10px 0 18px">
+          ${avatar(j,74,26)}
+          <div><div class="exp" style="font-size:21px;line-height:1.1">${esc(j.nome)}</div>
+          <div style="font-size:12px;color:var(--mut);margin-top:4px">${esc(j.clube||'')} · ${esc(j.cidade||'')}/${esc(j.estado||'BA')}</div>
+          <div style="margin-top:8px;display:flex;gap:6px">${tag('Cat. '+j.categoria,'var(--accl)','rgba(255,122,26,.16)')}
+          ${r?tag('#'+r.posicao+' no ranking','var(--gold)','rgba(255,178,36,.12)'):''}</div></div>
+        </div>
+        <div class="grid" style="grid-template-columns:repeat(3,1fr);text-align:center">
+          <div><div class="exp" style="font-size:22px;color:var(--accl)">${j.pontos}</div><div class="eyebrow">Pontos</div></div>
+          <div><div class="exp" style="font-size:22px;color:var(--ok)">${j.vitorias}</div><div class="eyebrow">Vitórias</div></div>
+          <div><div class="exp" style="font-size:22px;color:var(--bad)">${j.derrotas}</div><div class="eyebrow">Derrotas</div></div>
+        </div>
+        ${j.bio ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mut);line-height:1.55">${esc(j.bio)}</div>` : ''}
+        ${S.isAdmin ? `<button class="btn sm" style="margin-top:16px" data-act="editarJogador" data-id="${j.id}">Editar jogador</button>` : ''}
+      </div>
+
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:6px">Perfil técnico</div>
+        <svg viewBox="0 0 240 230" style="width:100%;max-width:280px;display:block;margin:0 auto">
+          ${grade}
+          ${eixos.map((_,i)=>`<line x1="${cx}" y1="${cy}" x2="${pt(i,100)[0]}" y2="${pt(i,100)[1]}" stroke="rgba(255,255,255,.07)"/>`).join('')}
+          <polygon points="${poly}" fill="rgba(255,122,26,.22)" stroke="#FF7A1A" stroke-width="2"/>
+          ${radar.map((v,i)=>{const[x,y]=pt(i,v);return `<circle cx="${x}" cy="${y}" r="3" fill="#FF7A1A"/>`}).join('')}
+          ${eixos.map((e,i)=>{const[x,y]=pt(i,124);return `<text x="${x}" y="${y}" fill="#8A94A8" font-size="10" text-anchor="middle" font-family="Archivo">${e}</text>`}).join('')}
+        </svg>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:12px">Ficha</div>
+        ${[['Estilo',j.estilo],['Empunhadura',j.empunhadura],['Mão',j.mao],['Idade',j.idade&&j.idade+' anos'],
+           ['Físico',j.altura_cm&&`${(j.altura_cm/100).toFixed(2).replace('.',',')} m · ${j.peso_kg} kg`],
+           ['Madeira',j.madeira],['Borracha FH',j.borracha_fh],['Borracha BH',j.borracha_bh],
+           ['No circuito desde',j.desde],['Instagram',j.instagram]]
+          .filter(([,v]) => v).map(([k,v]) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:13px">
+            <span style="color:var(--mut)">${esc(k)}</span><span style="font-weight:600;text-align:right">${esc(v)}</span></div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:12px">Campanha por etapa</div>
+        ${hist.length ? hist.map(h => {
+          const et = S.etapas.find(e => e.id === h.etapa_id);
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line)">
+            <div><div style="font-size:13px;font-weight:600">${esc(et?.nome || 'Etapa')}</div>
+            <div style="font-size:11px;color:var(--mut)">${esc(et?.cidade||'')} · ${dataBR(et?.data)}</div></div>
+            <div style="text-align:right"><div class="exp" style="font-size:15px">${h.posicao}º</div>
+            <div style="font-size:11px;color:var(--accl)">+${h.pontos} pts</div></div></div>`;
+        }).join('') : `<div style="color:var(--mut);font-size:13px">Sem resultados registrados ainda.</div>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- ETAPAS ---------- */
+function telaEtapas(){
+  const sel = S.etapas.find(e => e.id === S.etapaSel) || S.etapas[0];
+  if(!sel) return vazio('Nenhuma etapa cadastrada','Crie a primeira etapa para começar a organizar o circuito.',
+    S.isAdmin ? `<button class="btn pri" data-act="novaEtapa">+ Nova etapa</button>` : '');
+  const res = S.resultados.filter(r => r.etapa_id === sel.id);
+  const medalhas = ['🥇','🥈','🥉'];
+  const stCor = {planejada:'var(--blue)', em_andamento:'var(--bad)', encerrada:'var(--ok)'};
+  const stTxt = {planejada:'Planejada', em_andamento:'Em andamento', encerrada:'Encerrada'};
+  return `<div class="screen">
+    <div class="chips">${S.etapas.map(e => `<button class="chip ${sel.id===e.id?'on':''}" data-etapa="${e.id}">${esc(e.nome||'Etapa '+e.numero)}</button>`).join('')}</div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+        <div style="flex:1;min-width:200px">
+          <div class="exp" style="font-size:20px">${esc(sel.nome || 'Etapa '+sel.numero)}</div>
+          <div style="font-size:12.5px;color:var(--mut);margin-top:4px">${dataBR(sel.data)} · ${esc(sel.local||'')} · ${esc(sel.cidade||'')}</div>
+        </div>
+        ${tag(stTxt[sel.status], stCor[sel.status], 'rgba(255,255,255,.05)')}
+        ${S.isAdmin ? `<div style="display:flex;gap:8px">
+          ${sel.status!=='em_andamento' ? `<button class="btn sm" data-act="ativarEtapa" data-id="${sel.id}">Tornar etapa do dia</button>`:''}
+          ${sel.status==='em_andamento' ? `<button class="btn sm" data-act="encerrarEtapa" data-id="${sel.id}">Encerrar e pontuar</button>`:''}
+        </div>`:''}
+      </div>
+    </div>
+    ${res.length ? `
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:16px">
+        ${res.slice(0,3).map((r,i) => `<div class="card" style="text-align:center;background:linear-gradient(160deg,${['rgba(255,178,36,.16)','rgba(200,208,222,.1)','rgba(208,138,78,.12)'][i]},var(--panel));border-color:${i===0?'rgba(255,178,36,.35)':'var(--line)'}">
+          <div style="font-size:26px">${medalhas[i]}</div>
+          <div style="font-weight:700;font-size:14px;margin-top:6px">${esc(nome(r.jogador_id))}</div>
+          <div style="font-size:11px;color:var(--mut)">${esc(jog(r.jogador_id)?.clube||'')}</div>
+          <div class="exp" style="font-size:15px;color:var(--accl);margin-top:6px">+${r.pontos} pts</div></div>`).join('')}
+      </div>
+      <div class="card" style="padding:16px 6px"><div class="scroller"><table>
+        <thead><tr><th style="width:52px">Pos.</th><th>Jogador</th><th>Cat.</th><th style="text-align:right">Pontos ganhos</th></tr></thead>
+        <tbody>${res.map(r => `<tr class="clickable" data-perfil="${r.jogador_id}">
+          <td><span class="exp" style="font-size:14px;color:${r.posicao<=3?'var(--gold)':'var(--dim)'}">${r.posicao}º</span></td>
+          <td><div style="display:flex;align-items:center;gap:10px">${avatar(jog(r.jogador_id),32,11)}<span style="font-weight:600">${esc(nome(r.jogador_id))}</span></div></td>
+          <td>${tag('Cat. '+r.categoria,'var(--accl)','rgba(255,122,26,.12)')}</td>
+          <td style="text-align:right"><span class="exp" style="color:var(--accl)">+${r.pontos}</span></td></tr>`).join('')}</tbody>
+      </table></div></div>`
+    : vazio('Etapa ainda sem resultados', sel.status==='em_andamento'
+        ? 'Assim que as partidas forem finalizadas e a etapa encerrada, o pódio aparece aqui.'
+        : 'Registre as partidas e encerre a etapa para gerar a pontuação.')}
+  </div>`;
+}
+
+/* ---------- ESTATÍSTICAS ---------- */
+function telaEstatisticas(){
+  const R = S.ranking;
+  if(!R.length) return vazio('Sem dados ainda','Os recordes aparecem quando houver jogadores e resultados registrados.');
+  const maxBy = (arr,f) => arr.reduce((a,b) => f(b) > f(a) ? b : a, arr[0]);
+  const comJogos = R.filter(r => r.vitorias + r.derrotas >= 5);
+  const recordes = [
+    ['🏆','Maior vencedor', maxBy(R, r=>r.vitorias), r=>r.vitorias+' vitórias'],
+    ['📈','Melhor aproveitamento', comJogos.length ? maxBy(comJogos, r=>aprov(r.vitorias,r.derrotas)) : R[0], r=>aprov(r.vitorias,r.derrotas)+'%'],
+    ['⚡','Mais ativo', maxBy(R, r=>r.vitorias+r.derrotas), r=>(r.vitorias+r.derrotas)+' jogos'],
+    ['🎯','Mais etapas disputadas', maxBy(R, r=>r.etapas_disputadas), r=>r.etapas_disputadas+' etapas'],
+    ['🥇','Líder do ranking', R[0], r=>r.pontos+' pts'],
+  ];
+  const porCat = ['A','B','C','D'].map(c => ({c, n:R.filter(r => r.categoria === c).length}));
+  const maxCat = Math.max(1, ...porCat.map(x => x.n));
+  return `<div class="screen grid" style="gap:16px">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+      ${recordes.map(([ic,label,r,val]) => r ? `<div class="card" data-perfil="${r.id}" style="cursor:pointer">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="font-size:22px">${ic}</div>
+          <div style="min-width:0;flex:1">
+            <div class="eyebrow">${esc(label)}</div>
+            <div style="font-weight:700;font-size:14px;margin-top:3px">${esc(r.nome)}</div>
+            <div style="font-size:11.5px;color:var(--mut)">${esc(r.clube||'')}</div>
+          </div>
+          <div class="exp" style="font-size:14px;color:var(--accl);white-space:nowrap">${esc(val(r))}</div>
+        </div></div>` : '').join('')}
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:14px">Jogadores por categoria</div>
+        ${porCat.map(x => `<div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px"><span>Categoria ${x.c}</span><span style="color:var(--mut)">${x.n}</span></div>
+          <div style="height:7px;background:rgba(255,255,255,.05);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:${x.n/maxCat*100}%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:99px"></div></div></div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:14px">Números do circuito</div>
+        ${[['Jogadores ativos', S.jogadores.length],['Etapas na temporada', S.etapas.length],
+           ['Etapas encerradas', S.etapas.filter(e=>e.status==='encerrada').length],
+           ['Partidas registradas', S.partidas.filter(p=>p.status==='finalizada').length],
+           ['Clubes representados', new Set(S.jogadores.map(j=>j.clube).filter(Boolean)).size],
+           ['Cidades', new Set(S.jogadores.map(j=>j.cidade).filter(Boolean)).size]]
+          .map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:13px">
+            <span style="color:var(--mut)">${k}</span><span class="exp" style="font-size:15px">${v}</span></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- DASHBOARD ---------- */
+function telaDashboard(){
+  const p = S.partidas;
+  const kpis = [
+    ['Jogadores ativos', S.jogadores.length, 'var(--tx)'],
+    ['Partidas hoje', p.length, 'var(--tx)'],
+    ['Em andamento', p.filter(x=>x.status==='andamento').length, 'var(--bad)'],
+    ['Finalizadas', p.filter(x=>x.status==='finalizada').length, 'var(--ok)'],
+    ['Mesas ocupadas', `${S.mesas.filter(m=>m.status!=='livre').length} / ${S.mesas.length}`, 'var(--tx)'],
+    ['Etapas na temporada', S.etapas.length, 'var(--tx)'],
+  ];
+  return `<div class="screen grid" style="gap:16px">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      ${kpis.map(([l,v,c]) => `<div class="kpi"><div class="eyebrow">${esc(l)}</div><div class="v" style="color:${c}">${v}</div></div>`).join('')}
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:12px">Top 5 do ranking</div>
+        ${S.ranking.slice(0,5).map(r => `<div class="clickable" data-perfil="${r.id}" style="display:flex;align-items:center;gap:11px;padding:9px 0;border-top:1px solid var(--line);cursor:pointer">
+          <div class="exp" style="width:22px;color:${r.posicao<=3?'var(--gold)':'var(--dim)'}">${r.posicao}</div>
+          ${avatar(r,32,11)}<div style="flex:1;font-size:13.5px;font-weight:600">${esc(r.nome)}</div>
+          <div class="exp" style="color:var(--accl)">${r.pontos}</div></div>`).join('') || `<div style="color:var(--mut);font-size:13px">Sem jogadores ainda.</div>`}
+      </div>
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:12px">Atalhos do dia</div>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:9px">
+          ${[['arbitro','⏱','Marcar placar'],['chamadas','≣','Chamar mesa'],['mesas','▤','Ver mesas'],['placar','◳','Registrar resultado']]
+            .map(([k,ic,l]) => `<button class="btn" data-go="${k}" style="text-align:left;padding:14px"><div style="font-size:18px;margin-bottom:5px">${ic}</div>${l}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- DASHBOARD DO EVENTO ---------- */
+function telaEvento(){
+  const p = S.partidas;
+  const kpis = [
+    ['Acontecendo agora', p.filter(x=>x.status==='andamento').length, 'var(--bad)'],
+    ['Mesas ocupadas', `${S.mesas.filter(m=>m.status==='partida'||m.status==='aguardando').length} / ${S.mesas.length}`, 'var(--tx)'],
+    ['Finalizadas hoje', p.filter(x=>x.status==='finalizada').length, 'var(--ok)'],
+    ['Na fila', p.filter(x=>['proxima','aguardando','chamando'].includes(x.status)).length, 'var(--blue)'],
+  ];
+  const porCat = [...new Set(p.map(x => x.categoria))].sort();
+  return `<div class="screen grid" style="gap:16px">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      ${kpis.map(([l,v,c]) => `<div class="kpi"><div class="eyebrow">${esc(l)}</div><div class="v" style="color:${c}">${v}</div></div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="margin-bottom:12px">Andamento por categoria</div>
+      ${porCat.length ? porCat.map(c => {
+        const t = p.filter(x=>x.categoria===c), f = t.filter(x=>x.status==='finalizada').length;
+        return `<div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px">
+            <span>Categoria ${esc(c)}</span><span style="color:var(--mut)">${f} de ${t.length} partidas</span></div>
+          <div style="height:7px;background:rgba(255,255,255,.05);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:${t.length?f/t.length*100:0}%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:99px;transition:width .4s"></div></div></div>`;
+      }).join('') : `<div style="color:var(--mut);font-size:13px">Nenhuma partida cadastrada nesta etapa.</div>`}
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      ${S.mesas.map(m => {
+        const pt = p.find(x => x.mesa_id === m.id && x.status !== 'finalizada');
+        const st = STATUS_MESA[m.status];
+        return `<div class="card" style="border-color:${m.status==='partida'?'rgba(229,72,77,.3)':'var(--line)'}">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="exp" style="font-size:18px">Mesa ${pad2(m.numero)}</div>
+            <span class="dot" style="background:${st.c}"></span></div>
+          <div style="font-size:11.5px;color:${st.c};margin-top:2px;font-weight:600">${st.l}</div>
+          <div style="font-size:12.5px;margin-top:8px;color:${pt?'var(--tx)':'var(--dim)'}">${pt ? esc(nome(pt.jogador_a))+' × '+esc(nome(pt.jogador_b)) : 'Mesa disponível'}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+/* ---------- CENTRAL DE CHAMADAS ---------- */
+function telaChamadas(){
+  const ordem = {chamando:0, andamento:1, aguardando:2, proxima:3, finalizada:4};
+  const lista = [...S.partidas].sort((a,b) => (ordem[a.status]-ordem[b.status]) || (a.ordem-b.ordem));
+  const chamando = lista.find(p => p.status === 'chamando');
+  if(!lista.length) return vazio('Nenhuma partida nesta etapa','Gere o chaveamento ou cadastre partidas para usar a central de chamadas.');
+  return `<div class="screen">
+    ${chamando ? `<div class="card" style="margin-bottom:16px;background:linear-gradient(160deg,rgba(255,122,26,.14),var(--panel));border-color:rgba(255,122,26,.35)">
+      <div class="eyebrow" style="margin-bottom:8px">Chamando agora — leia no microfone</div>
+      <div class="exp" style="font-size:17px;line-height:1.4">Mesa ${pad2(S.mesas.find(m=>m.id===chamando.mesa_id)?.numero||0)} · Categoria ${esc(chamando.categoria)} — ${esc(nome(chamando.jogador_a))} × ${esc(nome(chamando.jogador_b))}. Compareçam à mesa.</div>
+    </div>` : ''}
+    <div class="card" style="padding:16px 6px"><div class="scroller"><table>
+      <thead><tr><th>Partida</th><th>Fase</th><th>Mesa</th><th>Situação</th><th style="text-align:right">Ação</th></tr></thead>
+      <tbody>${lista.map(p => {
+        const st = STATUS_PARTIDA[p.status], m = S.mesas.find(x => x.id === p.mesa_id);
+        return `<tr>
+          <td><div style="font-weight:600">${esc(nome(p.jogador_a))} <span style="color:var(--dim)">×</span> ${esc(nome(p.jogador_b))}</div>
+            <div style="font-size:11px;color:var(--mut)">Cat. ${esc(p.categoria)}</div></td>
+          <td style="color:var(--mut)">${esc(FASES[p.fase])}</td>
+          <td>${m ? 'Mesa '+pad2(m.numero) : '<span style="color:var(--dim)">—</span>'}</td>
+          <td>${tag(st.l, st.c, st.bg)}</td>
+          <td style="text-align:right">${S.isAdmin ? `
+            ${['proxima','aguardando'].includes(p.status) ? `<button class="btn sm" data-act="chamar" data-id="${p.id}">Chamar</button>` : ''}
+            ${p.status==='chamando' ? `<button class="btn sm pri" data-act="iniciar" data-id="${p.id}">Iniciar</button>` : ''}
+            ${p.status==='andamento' ? `<button class="btn sm" data-act="arbitrar" data-id="${p.id}">Marcar placar</button>` : ''}
+          ` : ''}</td></tr>`;
+      }).join('')}</tbody>
+    </table></div></div>
+  </div>`;
+}
+
+/* ---------- MESAS ---------- */
+function telaMesas(){
+  if(!S.mesas.length) return vazio('Nenhuma mesa cadastrada','Defina a quantidade de mesas ao criar a etapa.');
+  return `<div class="screen grid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">
+    ${S.mesas.map(m => {
+      const p = S.partidas.find(x => x.mesa_id === m.id && x.status !== 'finalizada');
+      const st = STATUS_MESA[m.status];
+      return `<div class="card" style="border-color:${m.status==='partida'?'rgba(229,72,77,.32)':'var(--line)'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="exp" style="font-size:20px">Mesa ${pad2(m.numero)}</div>
+          ${tag(st.l, st.c)}
+        </div>
+        <div style="font-size:13px;color:${p?'var(--tx)':'var(--dim)'};min-height:38px">
+          ${p ? `${esc(nome(p.jogador_a))}<br><span style="color:var(--dim)">×</span> ${esc(nome(p.jogador_b))}` : 'Mesa disponível'}</div>
+        ${S.isAdmin ? `<div style="display:flex;gap:7px;margin-top:12px">
+          ${p && p.status==='andamento' ? `<button class="btn sm pri" data-act="arbitrar" data-id="${p.id}">Placar</button>` : ''}
+          ${p ? `<button class="btn sm" data-act="liberarMesa" data-id="${m.id}">Liberar</button>` : ''}
+        </div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ---------- GRUPOS ---------- */
+function telaGrupos(){
+  if(!S.etapa) return vazio('Nenhuma etapa ativa','Ative uma etapa para montar os grupos.');
+  if(!S.grupos.length) return vazio('Grupos ainda não formados',
+    'Escolha uma categoria e o sistema distribui os inscritos em grupos equilibrados pelo ranking.',
+    S.isAdmin ? CATS.slice(1).map(c => `<button class="btn ${c==='A'?'pri':''}" data-act="gerarGrupos" data-cat="${c}" style="margin:0 4px">Gerar grupos · Cat. ${c}</button>`).join('') : '');
+  return `<div class="screen">
+    ${S.isAdmin ? `<div class="chips">${CATS.slice(1).map(c => `<button class="btn sm" data-act="gerarGrupos" data-cat="${c}">Regerar Cat. ${c}</button>`).join('')}</div>` : ''}
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">
+      ${S.grupos.map(g => {
+        const ids = (g.grupo_jogadores || []).map(x => x.jogador_id);
+        const tab = ids.map(id => {
+          const ps = S.partidas.filter(p => p.grupo_id === g.id && p.status === 'finalizada' && [p.jogador_a,p.jogador_b].includes(id));
+          const v = ps.filter(p => p.vencedor_id === id).length;
+          return {id, v, d: ps.length - v};
+        }).sort((a,b) => b.v - a.v || a.d - b.d);
+        return `<div class="card">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <div class="exp" style="font-size:15px">${esc(g.nome)}</div>${tag('Cat. '+g.categoria,'var(--accl)','rgba(255,122,26,.12)')}</div>
+          ${tab.map((r,i) => `<div class="clickable" data-perfil="${r.id}" style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);cursor:pointer">
+            <div class="exp" style="width:18px;font-size:13px;color:${i<2?'var(--ok)':'var(--dim)'}">${i+1}</div>
+            ${avatar(jog(r.id),28,10)}
+            <div style="flex:1;font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nome(r.id))}</div>
+            <div style="font-size:12px;color:var(--mut)"><span style="color:var(--ok)">${r.v}</span>/<span style="color:var(--bad)">${r.d}</span></div>
+          </div>`).join('')}
+          <div class="eyebrow" style="margin-top:10px">Os 2 primeiros avançam</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+/* ---------- CHAVEAMENTO ---------- */
+function telaChaveamento(){
+  const ordemFase = ['oitavas','quartas','semifinal','final'];
+  const elim = S.partidas.filter(p => ordemFase.includes(p.fase));
+  const disputa3 = S.partidas.filter(p => p.fase === 'disputa3');
+  if(!elim.length) return vazio('Chaveamento ainda não gerado',
+    'Com a fase de grupos encerrada, gere a fase eliminatória a partir dos classificados.',
+    S.isAdmin ? CATS.slice(1).map(c => `<button class="btn ${c==='A'?'pri':''}" data-act="gerarChave" data-cat="${c}" style="margin:0 4px">Gerar chave · Cat. ${c}</button>`).join('') : '');
+  const fases = ordemFase.filter(f => elim.some(p => p.fase === f));
+  const linha = p => {
+    const venc = p.vencedor_id;
+    const lado = (id, sets) => `<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;${venc===id?'background:rgba(255,122,26,.1)':''};border-radius:7px">
+      ${avatar(jog(id),24,9)}
+      <div style="flex:1;min-width:0;font-size:12.5px;font-weight:${venc===id?700:500};color:${venc&&venc!==id?'var(--mut)':'var(--tx)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nome(id))}</div>
+      <div class="exp" style="font-size:13px;color:${venc===id?'var(--accl)':'var(--dim)'}">${sets}</div></div>`;
+    return `<div class="card" style="padding:8px;margin-bottom:10px;border-color:${p.status==='andamento'?'rgba(229,72,77,.3)':'var(--line)'}">
+      ${lado(p.jogador_a, p.sets_a)}${lado(p.jogador_b, p.sets_b)}
+      ${p.status==='andamento' ? `<div class="live" style="padding:4px 9px"><span class="dot"></span>AO VIVO</div>` : ''}
+    </div>`;
+  };
+  return `<div class="screen">
+    <div class="scroller"><div style="display:flex;gap:16px;min-width:min-content">
+      ${fases.map(f => `<div style="min-width:230px;flex:1">
+        <div class="eyebrow" style="margin-bottom:10px">${esc(FASES[f])}</div>
+        ${elim.filter(p => p.fase === f).map(linha).join('')}
+      </div>`).join('')}
+    </div></div>
+    ${disputa3.length ? `<div style="margin-top:18px;max-width:260px">
+      <div class="eyebrow" style="margin-bottom:10px">Disputa de 3º</div>${disputa3.map(linha).join('')}</div>` : ''}
+    ${S.isAdmin ? `<div class="chips" style="margin-top:18px">${CATS.slice(1).map(c => `<button class="btn sm" data-act="gerarChave" data-cat="${c}">Regerar chave · Cat. ${c}</button>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+/* ---------- PLACAR (registro manual) ---------- */
+function telaPlacar(){
+  const pend = S.partidas.filter(p => p.status !== 'finalizada');
+  if(!pend.length) return vazio('Nenhuma partida em aberto','Todas as partidas desta etapa já foram registradas.');
+  return `<div class="screen grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+    ${pend.map(p => {
+      const st = STATUS_PARTIDA[p.status], m = S.mesas.find(x => x.id === p.mesa_id);
+      return `<div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="eyebrow">${esc(FASES[p.fase])} · Cat. ${esc(p.categoria)}${m?' · Mesa '+pad2(m.numero):''}</div>${tag(st.l,st.c,st.bg)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">${avatar(jog(p.jogador_a),30,11)}
+          <div style="flex:1;font-size:13.5px;font-weight:600">${esc(nome(p.jogador_a))}</div>
+          <input class="inp" type="number" min="0" max="7" value="${p.sets_a}" id="sa-${p.id}" style="width:64px;text-align:center"></div>
+        <div style="display:flex;align-items:center;gap:10px">${avatar(jog(p.jogador_b),30,11)}
+          <div style="flex:1;font-size:13.5px;font-weight:600">${esc(nome(p.jogador_b))}</div>
+          <input class="inp" type="number" min="0" max="7" value="${p.sets_b}" id="sb-${p.id}" style="width:64px;text-align:center"></div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn pri sm" data-act="salvarPlacar" data-id="${p.id}" style="flex:1">Salvar resultado</button>
+          <button class="btn sm" data-act="arbitrar" data-id="${p.id}">Ponto a ponto</button></div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ---------- ÁRBITRO / PLACAR AO VIVO ---------- */
+function chipsSets(p){
+  const sets = (S.setsMap[p.id] || []);
+  const chips = sets.map(s => `<span class="chip" style="padding:5px 11px;font-size:11.5px;color:${s.pontos_a>s.pontos_b?'var(--accl)':'var(--blue)'};border-color:var(--line2)">${s.pontos_a}–${s.pontos_b}</span>`).join('');
+  const atual = (p.status === 'andamento')
+    ? `<span class="chip on" style="padding:5px 11px;font-size:11.5px">Set ${sets.length+1}: ${p.pontos_a}–${p.pontos_b}</span>` : '';
+  return `<div style="display:flex;gap:6px;justify-content:center;margin-top:16px;flex-wrap:wrap">${chips}${atual}</div>`;
+}
+
+function telaArbitro(){
+  const p = S.partidas.find(x => x.id === S.arbPartida);
+  if(!p){
+    const cand = S.partidas.filter(x => x.status !== 'finalizada');
+    if(!cand.length) return vazio('Nenhuma partida para arbitrar','Cadastre ou gere as partidas da etapa primeiro.');
+    return `<div class="screen">
+      <div class="eyebrow" style="margin-bottom:12px">Escolha a partida que você vai marcar</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+        ${cand.map(x => {
+          const m = S.mesas.find(y => y.id === x.mesa_id), st = STATUS_PARTIDA[x.status];
+          return `<button class="card" data-act="arbitrar" data-id="${x.id}" style="text-align:left;cursor:pointer">
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+              <div class="eyebrow">${esc(FASES[x.fase])} · Cat. ${esc(x.categoria)}${m?' · Mesa '+pad2(m.numero):''}</div>${tag(st.l,st.c,st.bg)}</div>
+            <div style="font-size:14px;font-weight:700">${esc(nome(x.jogador_a))}</div>
+            <div style="font-size:12px;color:var(--dim);margin:3px 0">versus</div>
+            <div style="font-size:14px;font-weight:700">${esc(nome(x.jogador_b))}</div>
+          </button>`;
+        }).join('')}
+      </div></div>`;
+  }
+
+  const sets = S.setsMap[p.id] || [];
+  const alvo = Math.ceil(p.melhor_de / 2);
+  const fim = p.sets_a >= alvo || p.sets_b >= alvo || p.status === 'finalizada';
+  const setPronto = (a,b) => (a >= 11 || b >= 11) && Math.abs(a-b) >= 2;
+  const podeFechar = setPronto(p.pontos_a, p.pontos_b);
+  const lado = (id, pts, letra, cor) => `
+    <div class="card" style="text-align:center;border-color:${cor}33">
+      ${avatar(jog(id),52,18)}
+      <div style="font-weight:700;font-size:14px;margin:10px 0 2px">${esc(nome(id))}</div>
+      <div class="eyebrow">Sets: ${letra==='A'?p.sets_a:p.sets_b}</div>
+      <div class="exp" style="font-size:64px;line-height:1.1;color:${cor};margin:6px 0">${pts}</div>
+      <button class="btn pri" data-act="ponto" data-lado="${letra}" style="width:100%;padding:16px;font-size:16px;background:${cor};box-shadow:none" ${fim?'disabled':''}>+1 ponto</button>
+    </div>`;
+
+  return `<div class="screen">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn sm gh" data-act="trocarPartida">← Trocar partida</button>
+      <span class="eyebrow">${esc(FASES[p.fase])} · Cat. ${esc(p.categoria)} · melhor de ${p.melhor_de}</span>
+      ${p.status==='andamento' ? `<span class="live"><span class="dot"></span>TRANSMITINDO</span>` : ''}
+    </div>
+
+    ${p.status !== 'andamento' && !fim ? `
+      <div class="card" style="text-align:center;padding:28px">
+        <div class="exp" style="font-size:18px;margin-bottom:6px">${esc(nome(p.jogador_a))} × ${esc(nome(p.jogador_b))}</div>
+        <div style="font-size:13px;color:var(--mut);margin-bottom:18px">Ao iniciar, o placar aparece na hora na página pública.</div>
+        <button class="btn pri" data-act="iniciar" data-id="${p.id}" style="padding:14px 30px;font-size:15px">Iniciar partida</button>
+      </div>` : `
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+        ${lado(p.jogador_a, p.pontos_a, 'A', '#FF7A1A')}
+        ${lado(p.jogador_b, p.pontos_b, 'B', '#3E68FF')}
+      </div>
+      <div style="display:flex;gap:9px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn" data-act="desfazer" ${fim?'disabled':''}>↶ Desfazer ponto</button>
+        <button class="btn ${podeFechar?'pri':''}" data-act="fecharSet" ${fim?'disabled':''}>Encerrar set ${sets.length+1}</button>
+        <div class="spacer"></div>
+        ${fim ? `<button class="btn pri" data-act="finalizarPartida" data-id="${p.id}">Salvar e encerrar partida</button>` : ''}
+      </div>
+      ${sets.length ? `<div class="card" style="margin-top:14px">
+        <div class="eyebrow" style="margin-bottom:10px">Sets encerrados</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">${sets.map((s,i) => `
+          <span class="chip" style="color:${s.pontos_a>s.pontos_b?'var(--accl)':'var(--blue)'}">Set ${i+1} · ${s.pontos_a}–${s.pontos_b}</span>`).join('')}</div>
+      </div>` : ''}
+      ${fim ? `<div class="card" style="margin-top:14px;text-align:center;background:linear-gradient(160deg,rgba(47,191,113,.12),var(--panel));border-color:rgba(47,191,113,.3)">
+        <div class="eyebrow">Vencedor</div>
+        <div class="exp" style="font-size:22px;margin-top:6px">${esc(nome(p.sets_a > p.sets_b ? p.jogador_a : p.jogador_b))}</div>
+        <div style="font-size:13px;color:var(--mut);margin-top:4px">${p.sets_a} × ${p.sets_b} em sets</div>
+      </div>` : ''}
+    `}
+  </div>`;
+}
+
+/* ============================================================
+   AÇÕES
+   ============================================================ */
+async function acaoPonto(lado){
+  const p = S.partidas.find(x => x.id === S.arbPartida); if(!p || p.status !== 'andamento') return;
+  if(lado === 'A') p.pontos_a++; else p.pontos_b++;
+  S.arbLog.push(lado); render();
+  const { error } = await sb.from('partidas').update({ pontos_a:p.pontos_a, pontos_b:p.pontos_b }).eq('id',p.id);
+  if(error) erro(error);
+}
+async function acaoDesfazer(){
+  const p = S.partidas.find(x => x.id === S.arbPartida); if(!p || !S.arbLog.length) return;
+  const ult = S.arbLog.pop();
+  if(ult === 'A') p.pontos_a = Math.max(0, p.pontos_a-1); else p.pontos_b = Math.max(0, p.pontos_b-1);
+  render();
+  await sb.from('partidas').update({ pontos_a:p.pontos_a, pontos_b:p.pontos_b }).eq('id',p.id);
+}
+async function acaoFecharSet(){
+  const p = S.partidas.find(x => x.id === S.arbPartida); if(!p) return;
+  if(p.pontos_a === p.pontos_b) return toast('Set empatado — defina o vencedor antes de encerrar.', true);
+  const n = (S.setsMap[p.id] || []).length + 1;
+  const venceuA = p.pontos_a > p.pontos_b;
+  const upd = { sets_a: p.sets_a + (venceuA?1:0), sets_b: p.sets_b + (venceuA?0:1), pontos_a:0, pontos_b:0 };
+  const { error:e1 } = await sb.from('sets').insert({ partida_id:p.id, numero:n, pontos_a:p.pontos_a, pontos_b:p.pontos_b });
+  if(e1) return erro(e1);
+  const { error:e2 } = await sb.from('partidas').update(upd).eq('id',p.id);
+  if(e2) return erro(e2);
+  S.arbLog = [];
+  await carregarEtapa(); await carregarSetsPartidas(); render();
+  toast(`Set ${n} encerrado.`);
+}
+async function acaoIniciar(id){
+  const p = S.partidas.find(x => x.id === id); if(!p) return;
+  const { error } = await sb.from('partidas').update({ status:'andamento', iniciada_em:new Date().toISOString() }).eq('id',id);
+  if(error) return erro(error);
+  if(p.mesa_id) await sb.from('mesas').update({ status:'partida' }).eq('id',p.mesa_id);
+  S.arbPartida = id; S.arbLog = [];
+  await carregarEtapa(); await carregarSetsPartidas(); irPara('arbitro');
+  toast('Partida no ar. O placar já aparece na página pública.');
+}
+async function acaoChamar(id){
+  const p = S.partidas.find(x => x.id === id); if(!p) return;
+  const { error } = await sb.from('partidas').update({ status:'chamando', chamada_em:new Date().toISOString() }).eq('id',id);
+  if(error) return erro(error);
+  if(p.mesa_id) await sb.from('mesas').update({ status:'aguardando' }).eq('id',p.mesa_id);
+  await carregarEtapa(); render(); toast('Chamada feita.');
+}
+async function acaoFinalizarPartida(id){
+  const p = S.partidas.find(x => x.id === id); if(!p) return;
+  const venc = p.sets_a > p.sets_b ? p.jogador_a : p.jogador_b;
+  const perd = venc === p.jogador_a ? p.jogador_b : p.jogador_a;
+  const { error } = await sb.from('partidas').update({
+    status:'finalizada', vencedor_id:venc, pontos_a:0, pontos_b:0, finalizada_em:new Date().toISOString()
+  }).eq('id',id);
+  if(error) return erro(error);
+  if(p.mesa_id) await sb.from('mesas').update({ status:'livre' }).eq('id',p.mesa_id);
+  const jv = jog(venc), jp = jog(perd);
+  if(jv) await sb.from('jogadores').update({ vitorias:(jv.vitorias||0)+1 }).eq('id',venc);
+  if(jp) await sb.from('jogadores').update({ derrotas:(jp.derrotas||0)+1 }).eq('id',perd);
+  S.arbPartida = null; S.arbLog = [];
+  await carregarTudo(); await carregarSetsPartidas(); render();
+  toast(`${nome(venc)} venceu. Resultado salvo.`);
+}
+async function acaoSalvarPlacar(id){
+  const a = parseInt($('#sa-'+id).value || '0', 10), b = parseInt($('#sb-'+id).value || '0', 10);
+  if(a === b) return toast('O placar não pode terminar empatado.', true);
+  const p = S.partidas.find(x => x.id === id);
+  const venc = a > b ? p.jogador_a : p.jogador_b, perd = a > b ? p.jogador_b : p.jogador_a;
+  const { error } = await sb.from('partidas').update({
+    sets_a:a, sets_b:b, status:'finalizada', vencedor_id:venc, finalizada_em:new Date().toISOString()
+  }).eq('id',id);
+  if(error) return erro(error);
+  if(p.mesa_id) await sb.from('mesas').update({ status:'livre' }).eq('id',p.mesa_id);
+  const jv = jog(venc), jp = jog(perd);
+  if(jv) await sb.from('jogadores').update({ vitorias:(jv.vitorias||0)+1 }).eq('id',venc);
+  if(jp) await sb.from('jogadores').update({ derrotas:(jp.derrotas||0)+1 }).eq('id',perd);
+  await carregarTudo(); render(); toast('Resultado salvo.');
+}
+async function acaoLiberarMesa(id){
+  await sb.from('partidas').update({ mesa_id:null }).eq('mesa_id',id).neq('status','finalizada');
+  await sb.from('mesas').update({ status:'livre' }).eq('id',id);
+  await carregarEtapa(); render(); toast('Mesa liberada.');
+}
+
+/* ---------- geração de grupos e chave ---------- */
+async function gerarGrupos(cat){
+  if(!S.etapa) return;
+  const elenco = S.jogadores.filter(j => j.categoria === cat)
+    .sort((a,b) => (S.ranking.find(r=>r.id===b.id)?.pontos||0) - (S.ranking.find(r=>r.id===a.id)?.pontos||0));
+  if(elenco.length < 4) return toast(`A categoria ${cat} precisa de pelo menos 4 jogadores.`, true);
+  const antigos = S.grupos.filter(g => g.categoria === cat).map(g => g.id);
+  if(antigos.length){ await sb.from('partidas').delete().in('grupo_id',antigos); await sb.from('grupos').delete().in('id',antigos); }
+  const nG = Math.max(1, Math.round(elenco.length / 4));
+  const buckets = Array.from({length:nG}, () => []);
+  elenco.forEach((j,i) => { const v = Math.floor(i/nG), col = v % 2 ? nG-1-(i%nG) : i%nG; buckets[col].push(j); });
+  for(let i=0;i<nG;i++){
+    const { data:g, error } = await sb.from('grupos')
+      .insert({ etapa_id:S.etapa.id, categoria:cat, nome:`Grupo ${String.fromCharCode(65+i)} · Cat. ${cat}`, ordem:i })
+      .select().single();
+    if(error) return erro(error);
+    await sb.from('grupo_jogadores').insert(buckets[i].map(j => ({ grupo_id:g.id, jogador_id:j.id })));
+    const partidas = [];
+    for(let a=0;a<buckets[i].length;a++) for(let b=a+1;b<buckets[i].length;b++)
+      partidas.push({ etapa_id:S.etapa.id, grupo_id:g.id, categoria:cat, fase:'grupo',
+        jogador_a:buckets[i][a].id, jogador_b:buckets[i][b].id, ordem:partidas.length });
+    if(partidas.length) await sb.from('partidas').insert(partidas);
+  }
+  await carregarEtapa(); irPara('grupos'); toast(`${nG} grupo(s) gerado(s) na categoria ${cat}.`);
+}
+
+async function gerarChave(cat){
+  if(!S.etapa) return;
+  const ordem = ['oitavas','quartas','semifinal','final'];
+  const daCat = S.partidas.filter(p => p.categoria === cat);
+  const existentes = ordem.filter(f => daCat.some(p => p.fase === f));
+  let origem = [], fase = null;
+
+  if(!existentes.length){
+    const gruposCat = S.grupos.filter(g => g.categoria === cat);
+    if(gruposCat.length){
+      for(const g of gruposCat){
+        const ids = (g.grupo_jogadores||[]).map(x => x.jogador_id);
+        const tab = ids.map(id => {
+          const ps = daCat.filter(p => p.grupo_id === g.id && p.status === 'finalizada' && [p.jogador_a,p.jogador_b].includes(id));
+          return { id, v: ps.filter(p => p.vencedor_id === id).length };
+        }).sort((a,b) => b.v - a.v);
+        origem.push(...tab.slice(0,2).map(x => x.id));
+      }
+    } else {
+      origem = S.ranking.filter(r => r.categoria === cat).slice(0,8).map(r => r.id);
+    }
+  } else {
+    const ultima = existentes[existentes.length-1];
+    if(ultima === 'final') return toast('A chave desta categoria já está completa.');
+    const ps = daCat.filter(p => p.fase === ultima);
+    if(ps.some(p => p.status !== 'finalizada')) return toast('Finalize todas as partidas da fase atual antes de gerar a próxima.', true);
+    origem = ps.map(p => p.vencedor_id).filter(Boolean);
+    if(ultima === 'semifinal' && !daCat.some(p => p.fase === 'disputa3')){
+      const perdedores = ps.map(p => p.vencedor_id === p.jogador_a ? p.jogador_b : p.jogador_a);
+      if(perdedores.length === 2) await sb.from('partidas').insert({
+        etapa_id:S.etapa.id, categoria:cat, fase:'disputa3', jogador_a:perdedores[0], jogador_b:perdedores[1], ordem:98 });
+    }
+  }
+  const n = origem.length;
+  fase = n >= 8 ? 'quartas' : n >= 4 ? 'semifinal' : n >= 2 ? 'final' : null;
+  if(!fase) return toast('Não há classificados suficientes para montar a chave.', true);
+  const usados = origem.slice(0, fase==='quartas'?8:fase==='semifinal'?4:2);
+  const novas = [];
+  for(let i=0;i<usados.length;i+=2) novas.push({
+    etapa_id:S.etapa.id, categoria:cat, fase, chave_pos:i/2,
+    jogador_a:usados[i], jogador_b:usados[usados.length-1-i] || usados[i+1], ordem:10+i });
+  const { error } = await sb.from('partidas').insert(novas);
+  if(error) return erro(error);
+  await carregarEtapa(); irPara('chaveamento'); toast(`${FASES[fase]} gerada na categoria ${cat}.`);
+}
+
+/* ---------- etapas ---------- */
+async function ativarEtapa(id){
+  await sb.from('etapas').update({ status:'encerrada' }).eq('status','em_andamento');
+  await sb.from('etapas').update({ status:'em_andamento' }).eq('id',id);
+  await carregarTudo(); render(); toast('Etapa marcada como a do dia.');
+}
+async function encerrarEtapa(id){
+  const et = S.etapas.find(e => e.id === id); if(!et) return;
+  const ps = S.partidas.filter(p => p.status === 'finalizada');
+  if(!ps.length) return toast('Registre ao menos uma partida antes de encerrar a etapa.', true);
+  const stats = {};
+  const bump = (jid, ganhou, sa, sb_) => {
+    if(!jid) return;
+    stats[jid] = stats[jid] || { v:0, d:0, saldo:0, cat: jog(jid)?.categoria || 'A' };
+    stats[jid][ganhou?'v':'d']++; stats[jid].saldo += sa - sb_;
+  };
+  ps.forEach(p => {
+    bump(p.jogador_a, p.vencedor_id === p.jogador_a, p.sets_a, p.sets_b);
+    bump(p.jogador_b, p.vencedor_id === p.jogador_b, p.sets_b, p.sets_a);
+  });
+  const pontuacao = Array.isArray(et.pontuacao) ? et.pontuacao : [100,80,65,55,50,45,40,36];
+  const ordenado = Object.entries(stats).sort((a,b) => b[1].v - a[1].v || b[1].saldo - a[1].saldo);
+  const linhas = ordenado.map(([jid, s], i) => ({
+    etapa_id:id, jogador_id:jid, categoria:s.cat, posicao:i+1,
+    pontos: pontuacao[i] ?? pontuacao[pontuacao.length-1], vitorias:s.v, derrotas:s.d }));
+  await sb.from('resultados_etapa').delete().eq('etapa_id',id);
+  const { error } = await sb.from('resultados_etapa').insert(linhas);
+  if(error) return erro(error);
+  await sb.from('etapas').update({ status:'encerrada' }).eq('id',id);
+  await sb.rpc('recalcular_pontos');
+  await carregarTudo(); await carregarResultados(id); render();
+  toast('Etapa encerrada e ranking atualizado.');
+}
+
+/* ============================================================
+   MODAIS
+   ============================================================ */
+function renderOverlay(){
+  let html = '';
+  if(S.modal === 'login'){
+    html += `<div class="modal" data-close><div class="box">
+      <h3>Entrar como organização</h3>
+      <p style="font-size:13px;color:var(--mut);margin:0 0 18px">Acesso para a diretoria e árbitros do circuito.</p>
+      <label class="f">E-mail</label><input class="inp" id="lg-email" type="email" autocomplete="username" placeholder="voce@kttirece.com.br">
+      <div style="height:12px"></div>
+      <label class="f">Senha</label><input class="inp" id="lg-senha" type="password" autocomplete="current-password" placeholder="••••••••">
+      <div style="display:flex;gap:9px;margin-top:20px">
+        <button class="btn gh" data-act="fecharModal" style="flex:1">Cancelar</button>
+        <button class="btn pri" data-act="fazerLogin" style="flex:1">Entrar</button></div>
+    </div></div>`;
+  }
+  if(S.modal?.tipo === 'jogador'){
+    const j = S.modal.dados || {};
+    const campo = (id,label,val,tipo='text') => `<label class="f">${label}</label><input class="inp" id="jf-${id}" type="${tipo}" value="${esc(val ?? '')}"><div style="height:10px"></div>`;
+    html += `<div class="modal" data-close><div class="box">
+      <h3>${j.id ? 'Editar jogador' : 'Novo jogador'}</h3>
+      <p style="font-size:13px;color:var(--mut);margin:0 0 18px">Só o nome é obrigatório — o resto dá pra completar depois.</p>
+      ${campo('nome','Nome completo', j.nome)}
+      <div style="display:flex;gap:10px"><div style="flex:1">${campo('cidade','Cidade', j.cidade)}</div><div style="flex:1">${campo('clube','Clube', j.clube)}</div></div>
+      <label class="f">Categoria</label>
+      <select class="inp" id="jf-categoria">${['A','B','C','D'].map(c => `<option ${j.categoria===c?'selected':''}>${c}</option>`).join('')}</select>
+      <div style="height:10px"></div>
+      <div style="display:flex;gap:10px"><div style="flex:1">${campo('estilo','Estilo', j.estilo)}</div><div style="flex:1">${campo('mao','Mão', j.mao)}</div></div>
+      <div style="display:flex;gap:10px"><div style="flex:1">${campo('empunhadura','Empunhadura', j.empunhadura)}</div><div style="flex:1">${campo('idade','Idade', j.idade,'number')}</div></div>
+      ${campo('foto_url','Foto (URL)', j.foto_url)}
+      <label class="f">Bio</label><textarea class="inp" id="jf-bio" rows="3">${esc(j.bio ?? '')}</textarea>
+      <div style="display:flex;gap:9px;margin-top:20px">
+        <button class="btn gh" data-act="fecharModal" style="flex:1">Cancelar</button>
+        <button class="btn pri" data-act="salvarJogador" data-id="${j.id||''}" style="flex:1">Salvar jogador</button></div>
+    </div></div>`;
+  }
+  if(S.modal?.tipo === 'etapa'){
+    html += `<div class="modal" data-close><div class="box">
+      <h3>Nova etapa</h3>
+      <p style="font-size:13px;color:var(--mut);margin:0 0 18px">As mesas são criadas junto com a etapa.</p>
+      <label class="f">Nome</label><input class="inp" id="ef-nome" placeholder="5ª Etapa"><div style="height:10px"></div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1"><label class="f">Número</label><input class="inp" id="ef-numero" type="number" value="${(S.etapas[0]?.numero||0)+1}"></div>
+        <div style="flex:1"><label class="f">Data</label><input class="inp" id="ef-data" type="date"></div></div>
+      <div style="height:10px"></div>
+      <label class="f">Ginásio / local</label><input class="inp" id="ef-local" placeholder="Ginásio Municipal"><div style="height:10px"></div>
+      <label class="f">Cidade</label><input class="inp" id="ef-cidade" placeholder="Irecê, BA"><div style="height:10px"></div>
+      <label class="f">Quantidade de mesas</label><input class="inp" id="ef-mesas" type="number" value="6">
+      <div style="display:flex;gap:9px;margin-top:20px">
+        <button class="btn gh" data-act="fecharModal" style="flex:1">Cancelar</button>
+        <button class="btn pri" data-act="salvarEtapa" style="flex:1">Criar etapa</button></div>
+    </div></div>`;
+  }
+  if(S.toast) html += `<div class="toast" style="border-color:${S.toast.erro?'rgba(229,72,77,.5)':'var(--line2)'};color:${S.toast.erro?'#FF9A9C':'var(--tx)'}">${esc(S.toast.msg)}</div>`;
+  $('#overlay').innerHTML = html;
+}
+
+async function salvarJogador(id){
+  const v = k => $('#jf-'+k)?.value.trim() || null;
+  if(!v('nome')) return toast('Informe o nome do jogador.', true);
+  const dados = { nome:v('nome'), cidade:v('cidade'), clube:v('clube'), categoria:v('categoria')||'C',
+    estilo:v('estilo'), mao:v('mao'), empunhadura:v('empunhadura'),
+    idade: v('idade') ? parseInt(v('idade'),10) : null, foto_url:v('foto_url'), bio:v('bio') };
+  const { error } = id ? await sb.from('jogadores').update(dados).eq('id',id)
+                       : await sb.from('jogadores').insert(dados);
+  if(error) return erro(error);
+  S.modal = null; await carregarTudo(); render(); toast(id ? 'Jogador atualizado.' : 'Jogador cadastrado.');
+}
+async function salvarEtapa(){
+  const v = k => $('#ef-'+k)?.value.trim() || null;
+  const qtd = parseInt(v('mesas') || '6', 10);
+  const { data, error } = await sb.from('etapas').insert({
+    nome: v('nome') || 'Etapa', numero: parseInt(v('numero')||'1',10),
+    data: v('data'), local: v('local'), cidade: v('cidade'), qtd_mesas: qtd
+  }).select().single();
+  if(error) return erro(error);
+  await sb.from('mesas').insert(Array.from({length:qtd}, (_,i) => ({ etapa_id:data.id, numero:i+1 })));
+  S.modal = null; S.etapaSel = data.id; await carregarTudo(); irPara('etapas'); toast('Etapa criada.');
+}
+
+/* ============================================================
+   EVENTOS
+   ============================================================ */
+document.addEventListener('click', async e => {
+  const close = e.target.closest('[data-close]');
+  if(close && e.target === close){ S.modal = null; return renderOverlay(); }
+  const el = e.target.closest('[data-go],[data-act],[data-perfil],[data-cat],[data-etapa]');
+  if(!el) return;
+
+  if(el.dataset.go) return irPara(el.dataset.go);
+  if(el.dataset.perfil && !el.dataset.act){
+    S.perfilId = el.dataset.perfil;
+    const r = await sb.from('resultados_etapa').select('*').eq('jogador_id', S.perfilId);
+    S.resultados = r.data || [];
+    return irPara('perfil', { perfilId: el.dataset.perfil });
+  }
+  if(el.dataset.etapa){ S.etapaSel = el.dataset.etapa; await carregarResultados(el.dataset.etapa); return render(); }
+  if(el.dataset.cat && !el.dataset.act){ S.cat = el.dataset.cat; return render(); }
+
+  const a = el.dataset.act, id = el.dataset.id;
+  const acoes = {
+    login:            () => { S.modal = 'login'; renderOverlay(); },
+    fecharModal:      () => { S.modal = null; renderOverlay(); },
+    fazerLogin:       () => entrar($('#lg-email').value.trim(), $('#lg-senha').value),
+    sair:             () => sair(),
+    novoJogador:      () => { S.modal = {tipo:'jogador', dados:{}}; renderOverlay(); },
+    editarJogador:    () => { S.modal = {tipo:'jogador', dados: jog(id) || {}}; renderOverlay(); },
+    salvarJogador:    () => salvarJogador(id || null),
+    novaEtapa:        () => { S.modal = {tipo:'etapa'}; renderOverlay(); },
+    salvarEtapa:      () => salvarEtapa(),
+    ativarEtapa:      () => ativarEtapa(id),
+    encerrarEtapa:    () => encerrarEtapa(id),
+    gerarGrupos:      () => gerarGrupos(el.dataset.cat),
+    gerarChave:       () => gerarChave(el.dataset.cat),
+    chamar:           () => acaoChamar(id),
+    iniciar:          () => acaoIniciar(id),
+    arbitrar:         () => { S.arbPartida = id; S.arbLog = []; irPara('arbitro'); },
+    trocarPartida:    () => { S.arbPartida = null; render(); },
+    ponto:            () => acaoPonto(el.dataset.lado),
+    desfazer:         () => acaoDesfazer(),
+    fecharSet:        () => acaoFecharSet(),
+    finalizarPartida: () => acaoFinalizarPartida(id),
+    salvarPlacar:     () => acaoSalvarPlacar(id),
+    liberarMesa:      () => acaoLiberarMesa(id),
+  };
+  if(acoes[a]) await acoes[a]();
+});
+
+document.addEventListener('input', e => {
+  if(e.target.id === 'busca'){ S.busca = e.target.value; renderView(); $('#busca')?.focus(); }
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && S.modal === 'login') entrar($('#lg-email').value.trim(), $('#lg-senha').value);
+  if(e.key === 'Escape' && S.modal){ S.modal = null; renderOverlay(); }
+  if(S.screen === 'arbitro' && S.arbPartida && !S.modal){
+    if(e.key === 'a' || e.key === 'A') acaoPonto('A');
+    if(e.key === 'l' || e.key === 'L') acaoPonto('B');
+    if(e.key === 'Backspace'){ e.preventDefault(); acaoDesfazer(); }
+  }
+});
+window.addEventListener('hashchange', () => { lerHash(); render(); });
+
+/* ============================================================
+   RENDER + REALTIME + BOOT
+   ============================================================ */
+async function carregarSetsPartidas(){
+  const ids = S.partidas.filter(p => ['andamento','finalizada'].includes(p.status)).map(p => p.id);
+  if(!ids.length){ S.setsMap = {}; return; }
+  const { data } = await sb.from('sets').select('*').in('partida_id', ids).order('numero');
+  S.setsMap = (data || []).reduce((m,s) => { (m[s.partida_id] ||= []).push(s); return m; }, {});
+}
+
+const TELAS_FN = {
+  publico:telaPublico, ranking:telaRanking, jogadores:telaJogadores, perfil:telaPerfil,
+  etapas:telaEtapas, estatisticas:telaEstatisticas, dashboard:telaDashboard, evento:telaEvento,
+  chamadas:telaChamadas, mesas:telaMesas, grupos:telaGrupos, chaveamento:telaChaveamento,
+  placar:telaPlacar, arbitro:telaArbitro,
+};
+function renderView(){
+  if(S.loading){ $('#view').innerHTML = `<div class="empty">Carregando o circuito…</div>`; return; }
+  const fn = TELAS_FN[S.screen] || telaPublico;
+  try { $('#view').innerHTML = fn(); }
+  catch(err){ console.error(err); $('#view').innerHTML = vazio('Algo quebrou nesta tela','Recarregue a página. Se continuar, me avise o que você estava fazendo.'); }
+}
+function render(){ renderNav(); renderTopbar(); renderView(); renderOverlay(); }
+
+let recarregando = null;
+function agendarRecarga(){
+  clearTimeout(recarregando);
+  recarregando = setTimeout(async () => {
+    await carregarEtapa(); await carregarSetsPartidas();
+    if(['publico','evento','chamadas','mesas','chaveamento','grupos','placar','arbitro'].includes(S.screen)) render();
+  }, 400);
+}
+function ligarRealtime(){
+  sb.channel('ktt-ao-vivo')
+    .on('postgres_changes', { event:'*', schema:'public', table:'partidas' }, payload => {
+      const nova = payload.new;
+      if(nova?.id){
+        const i = S.partidas.findIndex(p => p.id === nova.id);
+        if(i >= 0){ S.partidas[i] = { ...S.partidas[i], ...nova }; if(S.screen === 'publico' || S.screen === 'arbitro') renderView(); }
+      }
+      agendarRecarga();
+    })
+    .on('postgres_changes', { event:'*', schema:'public', table:'sets' }, agendarRecarga)
+    .on('postgres_changes', { event:'*', schema:'public', table:'mesas' }, agendarRecarga)
+    .subscribe();
+}
+
+(async function boot(){
+  lerHash();
+  render();
+  try {
+    await checarSessao();
+    await carregarTudo();
+    await carregarSetsPartidas();
+    if(S.etapaSel) await carregarResultados(S.etapaSel);
+    if(!location.hash) S.screen = S.isAdmin ? 'dashboard' : 'publico';
+    if(TELAS[S.screen] && !TELAS[S.screen].pub && !S.isAdmin) S.screen = 'publico';
+    S.loading = false;
+    render();
+    ligarRealtime();
+  } catch(err){
+    console.error(err);
+    S.loading = false;
+    $('#view').innerHTML = vazio('Não consegui falar com o servidor',
+      'Confira SUPABASE_URL e SUPABASE_ANON no topo do arquivo index.html e recarregue a página.');
+  }
+})();
+sb.auth.onAuthStateChange(async (evt) => {
+  if(evt === 'SIGNED_OUT' || evt === 'SIGNED_IN'){ await checarSessao(); render(); }
+});
+</script>
+</body>
+</html>
