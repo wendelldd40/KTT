@@ -128,7 +128,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON, { realtime:{ params:{ event
 const S = {
   screen:'publico', user:null, isAdmin:false, loading:true,
   jogadores:[], ranking:[], etapas:[], etapa:null, partidas:[], mesas:[], grupos:[], resultados:[],
-  setsAtuais:[], setsMap:{}, arbLog:[], perfilId:null, cat:'Geral', busca:'', etapaSel:null, arbPartida:null, chaveCat:'A', editChave:false, radarEdit:false, perfil:null, modal:null, toast:null,
+  setsAtuais:[], setsMap:{}, arbLog:[], perfilId:null, cat:'Geral', busca:'', etapaSel:null, arbPartida:null, chaveCat:'A', editChave:false, radarEdit:false, perfil:null, diaEvento:'todos', buscaModal:'', modal:null, toast:null,
 };
 const CATS = ['Geral','A','B','C','D'];
 const FASES = { grupo:'Fase de grupos', oitavas:'Oitavas', quartas:'Quartas', semifinal:'Semifinal', final:'Final', disputa3:'Disputa de 3º' };
@@ -366,6 +366,61 @@ function telaPublico(){
           </div>`).join('') : `<div style="color:var(--mut);font-size:13px;padding:8px 0">Ainda sem partidas encerradas.</div>`}
       </div>
     </div>
+
+    ${(() => {
+      const gruposComGente = S.grupos.filter(g => (g.grupo_jogadores||[]).length);
+      if(!gruposComGente.length) return '';
+      return `<div class="card">
+        <div style="display:flex;align-items:center;margin-bottom:12px"><div class="eyebrow">Grupos da etapa</div>
+        <div class="spacer"></div><button class="btn sm gh" data-go="grupos">Ver todos</button></div>
+        <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">
+          ${gruposComGente.map(g => {
+            const tab = classificacaoGrupo(g), vagas = g.vagas || 2;
+            return `<div style="background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:11px;padding:13px">
+              <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px">
+                <div style="font-weight:800;font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.nome)}</div>
+                ${tag('Cat. '+g.categoria,'var(--accl)','rgba(255,122,26,.12)')}</div>
+              ${tab.map((r,i) => `<div class="clickable" data-perfil="${r.id}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line);cursor:pointer">
+                <div class="exp" style="width:15px;font-size:12px;color:${i<vagas?'var(--ok)':'var(--dim)'}">${i+1}</div>
+                ${avatar(jog(r.id),24,9)}
+                <div style="flex:1;font-size:12.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nome(r.id))}</div>
+                <div style="font-size:11px;color:var(--mut)"><span style="color:var(--ok)">${r.v}</span>/<span style="color:var(--bad)">${r.d}</span></div>
+              </div>`).join('')}
+            </div>`;
+          }).join('')}
+        </div></div>`;
+    })()}
+
+    ${(() => {
+      const ordemFase = ['oitavas','quartas','semifinal','final'];
+      const elim = S.partidas.filter(p => ordemFase.includes(p.fase) || p.fase === 'disputa3');
+      if(!elim.length) return '';
+      const cats = [...new Set(elim.map(p => p.categoria))].sort();
+      const fasesUsadas = ordemFase.filter(f => elim.some(p => p.fase === f));
+      const linha = p => {
+        const venc = p.vencedor_id;
+        const lado = (id, s) => `<div style="display:flex;align-items:center;gap:7px;padding:6px 8px;${venc===id?'background:rgba(255,122,26,.1)':''};border-radius:6px">
+          ${avatar(jog(id),20,8)}
+          <div style="flex:1;min-width:0;font-size:11.5px;font-weight:${venc===id?700:500};color:${id?(venc&&venc!==id?'var(--mut)':'var(--tx)'):'var(--dim)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${id?esc(nome(id)):'a definir'}</div>
+          <div class="exp" style="font-size:12px;color:${venc===id?'var(--accl)':'var(--dim)'}">${s}</div></div>`;
+        return `<div style="background:rgba(255,255,255,.02);border:1px solid ${p.status==='andamento'?'rgba(229,72,77,.3)':'var(--line)'};border-radius:8px;padding:6px;margin-bottom:8px">
+          ${lado(p.jogador_a,p.sets_a)}${lado(p.jogador_b,p.sets_b)}
+          ${p.status==='andamento'?`<div class="live" style="padding:3px 8px 0"><span class="dot"></span>AO VIVO</div>`:''}</div>`;
+      };
+      return `<div class="card">
+        <div style="display:flex;align-items:center;margin-bottom:12px"><div class="eyebrow">Mata-mata${cats.length===1?' · Cat. '+cats[0]:''}</div>
+        <div class="spacer"></div><button class="btn sm gh" data-go="chaveamento">Ver chaveamento</button></div>
+        ${cats.length>1 ? `<div style="font-size:11px;color:var(--mut);margin-bottom:10px">Categorias em disputa: ${cats.map(c=>'Cat. '+c).join(' · ')}</div>` : ''}
+        <div class="scroller"><div style="display:flex;gap:14px;min-width:min-content">
+          ${fasesUsadas.map(f => `<div style="min-width:190px;flex:1">
+            <div class="eyebrow" style="margin-bottom:8px">${esc(FASES[f])}</div>
+            ${elim.filter(p => p.fase === f).map(linha).join('')}
+          </div>`).join('')}
+          ${elim.some(p => p.fase==='disputa3') ? `<div style="min-width:190px;flex:1">
+            <div class="eyebrow" style="margin-bottom:8px">Disputa de 3º</div>
+            ${elim.filter(p => p.fase==='disputa3').map(linha).join('')}</div>` : ''}
+        </div></div></div>`;
+    })()}
 
     <div class="card">
       <div style="display:flex;align-items:center;margin-bottom:12px"><div class="eyebrow">Top 5 do ranking</div>
@@ -697,30 +752,66 @@ function telaPerfil(){
   </div>`;
 }
 
-/* ---------- ETAPAS ---------- */
+/* ---------- ETAPAS / TORNEIOS ---------- */
+const DIAS = { sabado:'Sábado', domingo:'Domingo', sexta:'Sexta', segunda:'Segunda', unico:'Dia único' };
+
 function telaEtapas(){
+  if(!S.etapas.length) return vazio('Nenhum torneio cadastrado','Crie o primeiro torneio para começar o circuito.',
+    S.isAdmin ? `<button class="btn pri" data-act="novaEtapa">+ Novo torneio</button>` : '');
   const sel = S.etapas.find(e => e.id === S.etapaSel) || S.etapas[0];
-  if(!sel) return vazio('Nenhuma etapa cadastrada','Crie a primeira etapa para começar a organizar o circuito.',
-    S.isAdmin ? `<button class="btn pri" data-act="novaEtapa">+ Nova etapa</button>` : '');
   const res = S.resultados.filter(r => r.etapa_id === sel.id);
   const medalhas = ['🥇','🥈','🥉'];
   const stCor = {planejada:'var(--blue)', em_andamento:'var(--bad)', encerrada:'var(--ok)'};
-  const stTxt = {planejada:'Planejada', em_andamento:'Em andamento', encerrada:'Encerrada'};
+  const stTxt = {planejada:'Planejado', em_andamento:'Acontecendo', encerrada:'Encerrado'};
+  const dias = sel.dias_categoria || {};
+
+  const catsDoTorneio = [...new Set([
+    ...S.jogadores.map(j => j.categoria),
+    ...res.map(r => r.categoria),
+    ...Object.keys(dias)
+  ])].filter(Boolean).sort();
+
   return `<div class="screen">
-    <div class="chips">${S.etapas.map(e => `<button class="chip ${sel.id===e.id?'on':''}" data-etapa="${e.id}">${esc(e.nome||'Etapa '+e.numero)}</button>`).join('')}</div>
+    <div class="chips">${S.etapas.map(e => {
+      const st = {planejada:'var(--blue)',em_andamento:'var(--bad)',encerrada:'var(--dim)'}[e.status];
+      return `<button class="chip ${sel.id===e.id?'on':''}" data-etapa="${e.id}">
+        <span class="dot" style="background:${st};display:inline-block;margin-right:6px"></span>${esc(e.nome||'Etapa '+e.numero)}${e.temporada?` · ${e.temporada}`:''}</button>`;
+    }).join('')}</div>
+
     <div class="card" style="margin-bottom:16px">
       <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
         <div style="flex:1;min-width:200px">
           <div class="exp" style="font-size:20px">${esc(sel.nome || 'Etapa '+sel.numero)}</div>
-          <div style="font-size:12.5px;color:var(--mut);margin-top:4px">${dataBR(sel.data)} · ${esc(sel.local||'')} · ${esc(sel.cidade||'')}</div>
+          <div style="font-size:12.5px;color:var(--mut);margin-top:4px">${dataBR(sel.data)}${sel.local?' · '+esc(sel.local):''}${sel.cidade?' · '+esc(sel.cidade):''}</div>
         </div>
         ${tag(stTxt[sel.status], stCor[sel.status], 'rgba(255,255,255,.05)')}
-        ${S.isAdmin ? `<div style="display:flex;gap:8px">
-          ${sel.status!=='em_andamento' ? `<button class="btn sm" data-act="ativarEtapa" data-id="${sel.id}">Tornar etapa do dia</button>`:''}
+        ${S.isAdmin ? `<div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${sel.status!=='em_andamento' ? `<button class="btn sm" data-act="ativarEtapa" data-id="${sel.id}">Tornar torneio do dia</button>`:''}
           ${sel.status==='em_andamento' ? `<button class="btn sm" data-act="encerrarEtapa" data-id="${sel.id}">Encerrar e pontuar</button>`:''}
+          <button class="btn sm gh" data-act="lancarPontos" data-id="${sel.id}">Lançar pontos na mão</button>
         </div>`:''}
       </div>
     </div>
+
+    ${S.isAdmin ? `<div class="card" style="margin-bottom:16px">
+      <div class="eyebrow" style="margin-bottom:12px">Dias de jogo por categoria</div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:12px">Defina quando cada categoria joga. No <b>Dia do evento</b> você filtra por dia e só aparece o que rola naquele dia.</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">
+        ${(catsDoTorneio.length?catsDoTorneio:['A','B','C','D']).map(c => `
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="font-size:12.5px;font-weight:700;width:64px">Cat. ${esc(c)}</span>
+            <select class="inp" data-diacat="${esc(c)}" data-etapa="${sel.id}" style="padding:7px 9px;font-size:12.5px">
+              <option value="">— não definido —</option>
+              ${Object.entries(DIAS).map(([k,v]) => `<option value="${k}" ${dias[c]===k?'selected':''}>${v}</option>`).join('')}
+            </select>
+          </div>`).join('')}
+      </div>
+    </div>` : (Object.keys(dias).length ? `<div class="card" style="margin-bottom:16px">
+      <div class="eyebrow" style="margin-bottom:10px">Quando cada categoria joga</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${Object.entries(dias).map(([c,d]) => tag(`Cat. ${c} · ${DIAS[d]||d}`,'var(--accl)','rgba(255,122,26,.12)')).join('')}
+      </div></div>` : '')}
+
     ${res.length ? `
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:16px">
         ${res.slice(0,3).map((r,i) => `<div class="card" style="text-align:center;background:linear-gradient(160deg,${['rgba(255,178,36,.16)','rgba(200,208,222,.1)','rgba(208,138,78,.12)'][i]},var(--panel));border-color:${i===0?'rgba(255,178,36,.35)':'var(--line)'}">
@@ -737,9 +828,9 @@ function telaEtapas(){
           <td>${tag('Cat. '+r.categoria,'var(--accl)','rgba(255,122,26,.12)')}</td>
           <td style="text-align:right"><span class="exp" style="color:var(--accl)">+${r.pontos}</span></td></tr>`).join('')}</tbody>
       </table></div></div>`
-    : vazio('Etapa ainda sem resultados', sel.status==='em_andamento'
-        ? 'Assim que as partidas forem finalizadas e a etapa encerrada, o pódio aparece aqui.'
-        : 'Registre as partidas e encerre a etapa para gerar a pontuação.')}
+    : vazio('Torneio ainda sem resultados', sel.status==='em_andamento'
+        ? 'Finalize as partidas e encerre para gerar o pódio — ou lance os pontos na mão pelo botão acima.'
+        : 'Registre as partidas e encerre o torneio, ou use "Lançar pontos na mão" para colocar um resultado que já aconteceu.')}
   </div>`;
 }
 
@@ -829,7 +920,23 @@ function telaDashboard(){
 
 /* ---------- DASHBOARD DO EVENTO ---------- */
 function telaEvento(){
-  const p = S.partidas;
+  const dias = S.etapa?.dias_categoria || {};
+  const diasUsados = [...new Set(Object.values(dias))].filter(Boolean);
+  let p = S.partidas;
+  let filtroDia = '';
+  if(diasUsados.length && S.diaEvento && S.diaEvento !== 'todos'){
+    const catsDoDia = Object.entries(dias).filter(([,d]) => d === S.diaEvento).map(([c]) => c);
+    p = p.filter(x => catsDoDia.includes(x.categoria));
+    filtroDia = `<div class="chips">
+      <button class="chip ${S.diaEvento==='todos'?'on':''}" data-dia="todos">Todos os dias</button>
+      ${diasUsados.map(d => `<button class="chip ${S.diaEvento===d?'on':''}" data-dia="${d}">${DIAS[d]||d}</button>`).join('')}
+    </div>`;
+  } else if(diasUsados.length){
+    filtroDia = `<div class="chips">
+      <button class="chip ${!S.diaEvento||S.diaEvento==='todos'?'on':''}" data-dia="todos">Todos os dias</button>
+      ${diasUsados.map(d => `<button class="chip ${S.diaEvento===d?'on':''}" data-dia="${d}">${DIAS[d]||d} <span style="color:var(--dim)">· ${Object.entries(dias).filter(([,x])=>x===d).map(([c])=>c).join('/')}</span></button>`).join('')}
+    </div>`;
+  }
   const kpis = [
     ['Acontecendo agora', p.filter(x=>x.status==='andamento').length, 'var(--bad)'],
     ['Mesas ocupadas', `${S.mesas.filter(m=>m.status==='partida'||m.status==='aguardando').length} / ${S.mesas.length}`, 'var(--tx)'],
@@ -837,7 +944,9 @@ function telaEvento(){
     ['Na fila', p.filter(x=>['proxima','aguardando','chamando'].includes(x.status)).length, 'var(--blue)'],
   ];
   const porCat = [...new Set(p.map(x => x.categoria))].sort();
-  return `<div class="screen grid" style="gap:16px">
+  return `<div class="screen">
+    ${filtroDia}
+    <div class="grid" style="gap:16px">
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
       ${kpis.map(([l,v,c]) => `<div class="kpi"><div class="eyebrow">${esc(l)}</div><div class="v" style="color:${c}">${v}</div></div>`).join('')}
     </div>
@@ -865,8 +974,10 @@ function telaEvento(){
         </div>`;
       }).join('')}
     </div>
+  </div>
   </div>`;
 }
+
 
 /* ---------- CENTRAL DE CHAMADAS ---------- */
 function telaChamadas(){
@@ -1344,6 +1455,33 @@ async function gerarChave(cat){
 
 
 
+
+/* ---------- pontuação manual e dias ---------- */
+async function salvarPontosManuais(){
+  const et = S.etapas.find(e => e.id === S.modal.etapaId);
+  const linhas = (S.modal.linhas || []).map((l,i) => ({
+    etapa_id: et.id, jogador_id: l.jogador_id, categoria: jog(l.jogador_id)?.categoria || 'A',
+    posicao: i+1, pontos: parseInt(l.pontos,10) || 0, vitorias:0, derrotas:0 }));
+  if(!linhas.length) return toast('Adicione ao menos um jogador.', true);
+  await sb.from('resultados_etapa').delete().eq('etapa_id', et.id);
+  const { error } = await sb.from('resultados_etapa').insert(linhas);
+  if(error) return erro(error);
+  await sb.rpc('recalcular_pontos');
+  await sb.from('etapas').update({ status:'encerrada' }).eq('id', et.id).eq('status','planejada');
+  S.modal = null; await carregarTudo(); await carregarResultados(et.id); render();
+  toast('Pontuação lançada e ranking atualizado.');
+}
+async function definirDiaCategoria(etapaId, cat, dia){
+  const et = S.etapas.find(e => e.id === etapaId); if(!et) return;
+  const dias = { ...(et.dias_categoria || {}) };
+  if(dia) dias[cat] = dia; else delete dias[cat];
+  const { error } = await sb.from('etapas').update({ dias_categoria: dias }).eq('id', etapaId);
+  if(error) return erro(error);
+  et.dias_categoria = dias;
+  if(S.etapa?.id === etapaId) S.etapa.dias_categoria = dias;
+  render();
+}
+
 async function salvarRadar(id){
   const vals = [...document.querySelectorAll('[data-radar]')]
     .sort((a,b) => a.dataset.radar - b.dataset.radar).map(el => parseInt(el.value,10));
@@ -1386,7 +1524,7 @@ function comprimirImagem(file, lado = 640){
 function capturarFormJogador(){
   if(S.modal?.tipo !== 'jogador') return;
   const d = S.modal.dados || (S.modal.dados = {});
-  ['nome','cidade','clube','categoria','estilo','mao','empunhadura','idade','bio','foto_url']
+  ['nome','cidade','clube','categoria','rating','estilo','mao','empunhadura','idade','bio','foto_url']
     .forEach(k => { const el = $('#jf-'+k); if(el) d[k] = el.value; });
 }
 async function subirFoto(file){
@@ -1549,8 +1687,16 @@ function renderOverlay(){
       <p style="font-size:13px;color:var(--mut);margin:0 0 18px">Só o nome é obrigatório — o resto dá pra completar depois.</p>
       ${campo('nome','Nome completo', j.nome)}
       <div style="display:flex;gap:10px"><div style="flex:1">${campo('cidade','Cidade', j.cidade)}</div><div style="flex:1">${campo('clube','Clube', j.clube)}</div></div>
-      <label class="f">Categoria</label>
-      <select class="inp" id="jf-categoria">${['A','B','C','D'].map(c => `<option ${j.categoria===c?'selected':''}>${c}</option>`).join('')}</select>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label class="f">Categoria</label>
+          <select class="inp" id="jf-categoria">${['A','B','C','D'].map(c => `<option ${j.categoria===c?'selected':''}>${c}</option>`).join('')}</select>
+        </div>
+        <div style="flex:1">
+          <label class="f">Rating <span style="color:var(--dim)">(base do ranking)</span></label>
+          <input class="inp" id="jf-rating" type="number" value="${j.rating ?? 0}">
+        </div>
+      </div>
       <div style="height:10px"></div>
       <div style="display:flex;gap:10px"><div style="flex:1">${campo('estilo','Estilo', j.estilo)}</div><div style="flex:1">${campo('mao','Mão', j.mao)}</div></div>
       <div style="display:flex;gap:10px"><div style="flex:1">${campo('empunhadura','Empunhadura', j.empunhadura)}</div><div style="flex:1">${campo('idade','Idade', j.idade,'number')}</div></div>
@@ -1584,10 +1730,44 @@ function renderOverlay(){
       <div style="height:10px"></div>
       <label class="f">Ginásio / local</label><input class="inp" id="ef-local" placeholder="Ginásio Municipal"><div style="height:10px"></div>
       <label class="f">Cidade</label><input class="inp" id="ef-cidade" placeholder="Irecê, BA"><div style="height:10px"></div>
-      <label class="f">Quantidade de mesas</label><input class="inp" id="ef-mesas" type="number" value="6">
+      <label class="f">Quantidade de mesas</label><input class="inp" id="ef-mesas" type="number" value="6"><div style="height:10px"></div>
+      <label class="f">Temporada</label><input class="inp" id="ef-temporada" type="number" value="${new Date().getFullYear()}">
       <div style="display:flex;gap:9px;margin-top:20px">
         <button class="btn gh" data-act="fecharModal" style="flex:1">Cancelar</button>
         <button class="btn pri" data-act="salvarEtapa" style="flex:1">Criar etapa</button></div>
+    </div></div>`;
+  }
+  if(S.modal?.tipo === 'lancarPontos'){
+    const et = S.etapas.find(e => e.id === S.modal.etapaId);
+    const linhas = S.modal.linhas || [];
+    const q = (S.buscaModal || '').toLowerCase();
+    const disp = S.jogadores.filter(j => !linhas.some(l => l.jogador_id === j.id) && (!q || j.nome.toLowerCase().includes(q)));
+    html += `<div class="modal" data-close><div class="box" style="max-width:520px">
+      <h3>Lançar pontos — ${esc(et?.nome || 'torneio')}</h3>
+      <p style="font-size:13px;color:var(--mut);margin:0 0 14px">Monte a classificação e a pontuação na mão. Serve pra registrar torneios que já aconteceram. Ao salvar, o ranking recalcula.</p>
+      ${linhas.length ? `<div style="margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:34px 1fr 74px 32px;gap:8px;padding:0 4px 6px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">
+          <div>Pos</div><div>Jogador</div><div>Pontos</div><div></div></div>
+        ${linhas.map((l,i) => `<div style="display:grid;grid-template-columns:34px 1fr 74px 32px;gap:8px;align-items:center;padding:5px 4px;border-top:1px solid var(--line)">
+          <div class="exp" style="font-size:14px;color:${i<3?'var(--gold)':'var(--dim)'}">${i+1}º</div>
+          <div style="display:flex;align-items:center;gap:8px;min-width:0">${avatar(jog(l.jogador_id),26,10)}
+            <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nome(l.jogador_id))}</span></div>
+          <input class="inp" type="number" data-ponto-idx="${i}" value="${l.pontos}" style="padding:6px 8px;font-size:12.5px;text-align:center">
+          <button class="btn sm gh dg" data-act="removerLinhaPonto" data-idx="${i}" style="padding:4px 8px">×</button>
+        </div>`).join('')}
+      </div>` : `<div style="color:var(--mut);font-size:13px;padding:10px 0;text-align:center">Adicione jogadores na ordem de classificação.</div>`}
+      <input class="inp" id="busca-modal" placeholder="Buscar jogador para adicionar" value="${esc(S.buscaModal || '')}" autocomplete="off">
+      ${q ? `<div style="max-height:34vh;overflow:auto;margin-top:8px">
+        ${disp.length ? disp.slice(0,30).map(j => `<button data-act="addLinhaPonto" data-id="${j.id}"
+          style="display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 6px;border-top:1px solid var(--line)">
+          ${avatar(j,26,10)}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${esc(j.nome)}</div>
+          <div style="font-size:10.5px;color:var(--mut)">${esc(j.clube||j.cidade||'')} · Cat. ${esc(j.categoria)}</div></div>
+          <span style="color:var(--accl)">+</span></button>`).join('')
+        : `<div style="color:var(--mut);font-size:12.5px;padding:10px 0">Nenhum jogador com esse nome.</div>`}
+      </div>` : ''}
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button class="btn gh" data-act="fecharModal" style="flex:1">Cancelar</button>
+        <button class="btn pri" data-act="salvarPontosManuais" style="flex:1">Salvar pontuação</button></div>
     </div></div>`;
   }
   if(S.modal?.tipo === 'novoGrupo'){
@@ -1645,6 +1825,7 @@ async function salvarJogador(id){
   const v = k => $('#jf-'+k)?.value.trim() || null;
   if(!v('nome')) return toast('Informe o nome do jogador.', true);
   const dados = { nome:v('nome'), cidade:v('cidade'), clube:v('clube'), categoria:v('categoria')||'C',
+    rating: v('rating') ? parseInt(v('rating'),10) : 0,
     estilo:v('estilo'), mao:v('mao'), empunhadura:v('empunhadura'),
     idade: v('idade') ? parseInt(v('idade'),10) : null, foto_url:v('foto_url'), bio:v('bio') };
   const { error } = id ? await sb.from('jogadores').update(dados).eq('id',id)
@@ -1657,6 +1838,7 @@ async function salvarEtapa(){
   const qtd = parseInt(v('mesas') || '6', 10);
   const { data, error } = await sb.from('etapas').insert({
     nome: v('nome') || 'Etapa', numero: parseInt(v('numero')||'1',10),
+    temporada: parseInt(v('temporada') || new Date().getFullYear(), 10),
     data: v('data'), local: v('local'), cidade: v('cidade'), qtd_mesas: qtd
   }).select().single();
   if(error) return erro(error);
@@ -1682,6 +1864,7 @@ document.addEventListener('click', async e => {
   if(el.dataset.etapa){ S.etapaSel = el.dataset.etapa; await carregarResultados(el.dataset.etapa); return render(); }
   if(el.dataset.cat && !el.dataset.act){ S.cat = el.dataset.cat; return render(); }
   if(el.dataset.chavecat){ S.chaveCat = el.dataset.chavecat; return render(); }
+  if(el.dataset.dia){ S.diaEvento = el.dataset.dia; return render(); }
 
   const a = el.dataset.act, id = el.dataset.id;
   const acoes = {
@@ -1724,6 +1907,12 @@ document.addEventListener('click', async e => {
     removerFoto:      () => { capturarFormJogador(); S.modal.dados.foto_url = ''; renderOverlay(); },
     toggleRadar:      () => { S.radarEdit = !S.radarEdit; render(); },
     salvarRadar:      () => salvarRadar(id),
+    lancarPontos:     () => { const r = S.resultados.filter(x => x.etapa_id === id).sort((a,b)=>a.posicao-b.posicao);
+                              S.modal = {tipo:'lancarPontos', etapaId:id, linhas: r.map(x => ({jogador_id:x.jogador_id, pontos:x.pontos}))};
+                              S.buscaModal=''; renderOverlay(); },
+    addLinhaPonto:    () => { S.modal.linhas = [...(S.modal.linhas||[]), {jogador_id:id, pontos:0}]; S.buscaModal=''; renderOverlay(); },
+    removerLinhaPonto:() => { S.modal.linhas.splice(parseInt(el.dataset.idx,10),1); renderOverlay(); },
+    salvarPontosManuais:() => salvarPontosManuais(),
   };
   if(acoes[a]) await acoes[a]();
 });
@@ -1731,6 +1920,11 @@ document.addEventListener('click', async e => {
 document.addEventListener('input', e => {
   if(e.target.id === 'busca'){ S.busca = e.target.value; renderView(); $('#busca')?.focus(); }
   if(e.target.dataset?.radar !== undefined){ return preverRadar(); }
+  if(e.target.dataset?.pontoIdx !== undefined && S.modal?.linhas){
+    const i = parseInt(e.target.dataset.pontoIdx,10);
+    if(S.modal.linhas[i]) S.modal.linhas[i].pontos = e.target.value;
+    return;
+  }
   if(e.target.id === 'busca-modal'){
     S.buscaModal = e.target.value; const pos = e.target.selectionStart;
     renderOverlay(); const c = $('#busca-modal'); if(c){ c.focus(); c.setSelectionRange(pos,pos); }
@@ -1742,6 +1936,8 @@ document.addEventListener('change', async e => {
     if(f) await subirFoto(f);
     return;
   }
+  const dc = e.target.closest('[data-diacat][data-etapa]');
+  if(dc && S.isAdmin){ return definirDiaCategoria(dc.dataset.etapa, dc.dataset.diacat, dc.value); }
   const el = e.target.closest('[data-campo][data-tabela][data-id]');
   if(!el || !S.isAdmin) return;
   await atualizarCampo(el.dataset.tabela, el.dataset.id, el.dataset.campo, el.value);
