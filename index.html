@@ -50,6 +50,7 @@ main{flex:1;min-width:0;padding:0 26px 80px}
 /* ---------- ELEMENTOS ---------- */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
 .grid{display:grid;gap:12px}
+.grid>*{min-width:0}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
 .kpi .v{font-size:26px;font-weight:800;font-stretch:112%;line-height:1.1;margin-top:6px}
 .btn{padding:9px 15px;border-radius:9px;background:var(--panel2);border:1px solid var(--line2);font-size:13px;font-weight:600;transition:.15s}
@@ -73,7 +74,7 @@ table{width:100%;border-collapse:collapse}
 th{text-align:left;font-size:10px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;padding:0 12px 10px;font-weight:600}
 td{padding:12px;border-top:1px solid var(--line);font-size:13.5px;vertical-align:middle}
 tr.clickable:hover td{background:rgba(255,255,255,.03);cursor:pointer}
-.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
 .empty{padding:40px 20px;text-align:center;color:var(--mut);font-size:13.5px}
 .empty b{display:block;color:var(--tx);font-size:15px;margin-bottom:6px;font-weight:700}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:200;background:#1A2236;border:1px solid var(--line2);padding:12px 18px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:fadeUp .2s}
@@ -83,6 +84,11 @@ tr.clickable:hover td{background:rgba(255,255,255,.03);cursor:pointer}
 .live{display:inline-flex;align-items:center;gap:6px;color:var(--bad);font-size:11px;font-weight:800;letter-spacing:.1em}
 .live .dot{background:var(--bad);animation:pulse 1.4s infinite}
 .screen{animation:fadeUp .25s}
+
+.perfil-grid{display:grid;grid-template-columns:344px 1fr;gap:16px;align-items:start}
+.perfil-grid>*{min-width:0}
+.perfil-card{position:sticky;top:92px}
+@media (max-width:1000px){.perfil-grid{grid-template-columns:1fr}.perfil-card{position:static}}
 
 /* ---------- MOBILE ---------- */
 @media (max-width:860px){
@@ -122,7 +128,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON, { realtime:{ params:{ event
 const S = {
   screen:'publico', user:null, isAdmin:false, loading:true,
   jogadores:[], ranking:[], etapas:[], etapa:null, partidas:[], mesas:[], grupos:[], resultados:[],
-  setsAtuais:[], setsMap:{}, arbLog:[], perfilId:null, cat:'Geral', busca:'', etapaSel:null, arbPartida:null, chaveCat:'A', editChave:false, modal:null, toast:null,
+  setsAtuais:[], setsMap:{}, arbLog:[], perfilId:null, cat:'Geral', busca:'', etapaSel:null, arbPartida:null, chaveCat:'A', editChave:false, radarEdit:false, perfil:null, modal:null, toast:null,
 };
 const CATS = ['Geral','A','B','C','D'];
 const FASES = { grupo:'Fase de grupos', oitavas:'Oitavas', quartas:'Quartas', semifinal:'Semifinal', final:'Final', disputa3:'Disputa de 3º' };
@@ -429,76 +435,265 @@ function telaJogadores(){
 }
 
 /* ---------- PERFIL ---------- */
+async function carregarPerfil(id){
+  S.perfilId = id;
+  S.perfil = { carregando:true, partidas:[], sets:{}, resultados:[] };
+  render();
+  const [pr, rr] = await Promise.all([
+    sb.from('partidas').select('*').or(`jogador_a.eq.${id},jogador_b.eq.${id}`).eq('status','finalizada'),
+    sb.from('resultados_etapa').select('*'),
+  ]);
+  const partidas = (pr.data || []);
+  let sets = {};
+  if(partidas.length){
+    const { data } = await sb.from('sets').select('*').in('partida_id', partidas.map(p => p.id)).order('numero');
+    sets = (data || []).reduce((m,s) => { (m[s.partida_id] ||= []).push(s); return m; }, {});
+  }
+  S.perfil = { carregando:false, partidas, sets, resultados: rr.data || [] };
+  S.resultados = (rr.data || []).filter(r => r.jogador_id === id);
+}
+
+function statsPerfil(id){
+  const j = jog(id) || {};
+  const D = S.perfil || { partidas:[], sets:{}, resultados:[] };
+  const ordemEtapa = e => { const x = S.etapas.find(y => y.id === e); return x ? x.temporada * 100 + x.numero : 0; };
+  const P = [...D.partidas].sort((a,b) => ordemEtapa(a.etapa_id) - ordemEtapa(b.etapa_id) ||
+    String(a.finalizada_em||'').localeCompare(String(b.finalizada_em||'')));
+
+  let v = 0, d = 0, sg = 0, sp = 0, pg = 0, ps = 0;
+  const jogos = P.map(p => {
+    const souA = p.jogador_a === id;
+    const meus = souA ? p.sets_a : p.sets_b, dele = souA ? p.sets_b : p.sets_a;
+    const ganhei = p.vencedor_id === id;
+    ganhei ? v++ : d++; sg += meus; sp += dele;
+    const parciais = (D.sets[p.id] || []).map(s => souA ? [s.pontos_a, s.pontos_b] : [s.pontos_b, s.pontos_a]);
+    parciais.forEach(([a,b]) => { pg += a; ps += b; });
+    return { p, ganhei, meus, dele, parciais, adv: souA ? p.jogador_b : p.jogador_a };
+  });
+  const semJogos = !P.length;
+  if(semJogos){ v = j.vitorias || 0; d = j.derrotas || 0; }
+
+  let seqAtual = 0, seqTipo = null, maiorV = 0, corrente = 0;
+  jogos.forEach(g => { corrente = g.ganhei ? corrente + 1 : 0; maiorV = Math.max(maiorV, corrente); });
+  for(let i = jogos.length - 1; i >= 0; i--){
+    if(seqTipo === null) seqTipo = jogos[i].ganhei;
+    if(jogos[i].ganhei === seqTipo) seqAtual++; else break;
+  }
+
+  const temporadas = {};
+  jogos.filter(g => g.ganhei).forEach(g => {
+    const e = S.etapas.find(x => x.id === g.p.etapa_id);
+    if(e) temporadas[e.temporada] = (temporadas[e.temporada] || 0) + 1;
+  });
+
+  const etapasOrd = [...S.etapas].sort((a,b) => a.temporada - b.temporada || a.numero - b.numero);
+  const acumulado = {}; const evolucao = [];
+  etapasOrd.forEach(e => {
+    D.resultados.filter(r => r.etapa_id === e.id).forEach(r => { acumulado[r.jogador_id] = (acumulado[r.jogador_id] || 0) + r.pontos; });
+    if(acumulado[id] === undefined) return;
+    const ordenado = Object.entries(acumulado).sort((a,b) => b[1] - a[1]);
+    evolucao.push({ etapa:e, pos: ordenado.findIndex(x => x[0] === id) + 1, pts: acumulado[id], total: ordenado.length });
+  });
+
+  const porEtapa = S.resultados.map(r => {
+    const e = S.etapas.find(x => x.id === r.etapa_id);
+    const meus = jogos.filter(g => g.p.etapa_id === r.etapa_id);
+    return { r, e, v: meus.filter(g => g.ganhei).length, d: meus.filter(g => !g.ganhei).length,
+      ss: meus.reduce((s,g) => s + g.meus - g.dele, 0) };
+  }).sort((a,b) => (b.e?.temporada||0) - (a.e?.temporada||0) || (b.e?.numero||0) - (a.e?.numero||0));
+
+  return { j, v, d, sg, sp, pg, ps, jogos, seqAtual, seqTipo, maiorV, temporadas, evolucao, porEtapa, semJogos };
+}
+
 function telaPerfil(){
-  const j = jog(S.perfilId);
+  const id = S.perfilId, j = jog(id);
   if(!j) return vazio('Jogador não encontrado','Volte para a lista e escolha outro atleta.');
-  const r = S.ranking.find(x => x.id === j.id);
-  const radar = Array.isArray(j.radar) ? j.radar : [70,70,70,70,70];
-  const eixos = ['Ataque','Defesa','Saque','Consistência','Experiência'];
-  const hist = S.resultados.filter(x => x.jogador_id === j.id);
-  const cx=120, cy=115, R=88;
-  const pt = (i,v) => { const a = -Math.PI/2 + i*2*Math.PI/5, d = R*v/100; return [cx+d*Math.cos(a), cy+d*Math.sin(a)]; };
-  const poly = radar.map((v,i) => pt(i,v).join(',')).join(' ');
-  const grade = [25,50,75,100].map(g => `<polygon points="${eixos.map((_,i)=>pt(i,g).join(',')).join(' ')}" fill="none" stroke="rgba(255,255,255,.07)"/>`).join('');
+  if(S.perfil?.carregando) return `<div class="card empty">Carregando a ficha do atleta…</div>`;
 
-  return `<div class="screen grid" style="gap:16px">
-    <button class="btn sm gh" data-go="jogadores" style="justify-self:start">← Voltar para jogadores</button>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
-      <div class="card" style="background:linear-gradient(165deg,rgba(255,122,26,.14),rgba(255,77,28,.04) 45%,var(--panel));border-color:rgba(255,122,26,.28)">
-        <div style="display:flex;justify-content:space-between;align-items:start">
-          <div class="eyebrow">KTT Irecê · Atleta</div>
-          <div class="exp" style="font-size:30px;color:rgba(255,255,255,.14)">${j.camisa??''}</div>
-        </div>
-        <div style="display:flex;gap:14px;align-items:center;margin:10px 0 18px">
-          ${avatar(j,74,26)}
-          <div><div class="exp" style="font-size:21px;line-height:1.1">${esc(j.nome)}</div>
-          <div style="font-size:12px;color:var(--mut);margin-top:4px">${esc(j.clube||'')} · ${esc(j.cidade||'')}/${esc(j.estado||'BA')}</div>
-          <div style="margin-top:8px;display:flex;gap:6px">${tag('Cat. '+j.categoria,'var(--accl)','rgba(255,122,26,.16)')}
-          ${r?tag('#'+r.posicao+' no ranking','var(--gold)','rgba(255,178,36,.12)'):''}</div></div>
-        </div>
-        <div class="grid" style="grid-template-columns:repeat(3,1fr);text-align:center">
-          <div><div class="exp" style="font-size:22px;color:var(--accl)">${j.pontos}</div><div class="eyebrow">Pontos</div></div>
-          <div><div class="exp" style="font-size:22px;color:var(--ok)">${j.vitorias}</div><div class="eyebrow">Vitórias</div></div>
-          <div><div class="exp" style="font-size:22px;color:var(--bad)">${j.derrotas}</div><div class="eyebrow">Derrotas</div></div>
-        </div>
-        ${j.bio ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mut);line-height:1.55">${esc(j.bio)}</div>` : ''}
-        ${S.isAdmin ? `<button class="btn sm" style="margin-top:16px" data-act="editarJogador" data-id="${j.id}">Editar jogador</button>` : ''}
-      </div>
+  const st = statsPerfil(id);
+  const r = S.ranking.find(x => x.id === id);
+  const total = st.v + st.d;
+  const aprovPct = total ? Math.round(st.v * 100 / total) : 0;
+  const radar = Array.isArray(j.radar) && j.radar.length === 5 ? j.radar : [70,70,70,70,70];
+  const eixos = ['Ataque','Defesa','Saque','Recepção','Regularidade'];
 
-      <div class="card">
-        <div class="eyebrow" style="margin-bottom:6px">Perfil técnico</div>
-        <svg viewBox="0 0 240 230" style="width:100%;max-width:280px;display:block;margin:0 auto">
-          ${grade}
-          ${eixos.map((_,i)=>`<line x1="${cx}" y1="${cy}" x2="${pt(i,100)[0]}" y2="${pt(i,100)[1]}" stroke="rgba(255,255,255,.07)"/>`).join('')}
-          <polygon points="${poly}" fill="rgba(255,122,26,.22)" stroke="#FF7A1A" stroke-width="2"/>
-          ${radar.map((v,i)=>{const[x,y]=pt(i,v);return `<circle cx="${x}" cy="${y}" r="3" fill="#FF7A1A"/>`}).join('')}
-          ${eixos.map((e,i)=>{const[x,y]=pt(i,124);return `<text x="${x}" y="${y}" fill="#8A94A8" font-size="10" text-anchor="middle" font-family="Archivo">${e}</text>`}).join('')}
-        </svg>
+  /* --- card da foto --- */
+  const temFoto = !!j.foto_url;
+  const cardFoto = `<div class="card" style="padding:0;overflow:hidden;border-radius:18px;background:linear-gradient(160deg,#1A2130,#0E1420 60%)">
+    <div ${S.isAdmin ? `data-act="editarJogador" data-id="${j.id}" style="cursor:pointer;` : 'style="'}position:relative;min-height:300px;display:flex;flex-direction:column;justify-content:flex-end;padding:22px 20px 18px;
+      ${temFoto ? `background-image:url('${esc(j.foto_url)}');background-size:cover;background-position:center top;` : `background:${esc(j.avatar_grad || 'linear-gradient(160deg,#2A3450,#141A28)')};`}">
+      <div style="position:absolute;inset:0;background:linear-gradient(160deg,rgba(255,122,26,.32) 0%,rgba(20,12,6,.12) 32%,rgba(11,15,23,.6) 62%,rgba(11,15,23,.95) 100%)"></div>
+      ${r ? `<div class="exp" style="position:absolute;top:14px;right:16px;font-size:30px;color:rgba(255,255,255,.9);text-shadow:0 2px 12px rgba(0,0,0,.6)">#${r.posicao}</div>` : ''}
+      ${!temFoto ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:rgba(255,255,255,.5)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+        <div style="font-size:12px">${S.isAdmin ? 'Toque para adicionar a foto' : 'Foto do atleta'}</div></div>` : ''}
+      <div style="position:relative">
+        <div class="exp" style="font-size:22px;text-shadow:0 2px 12px rgba(0,0,0,.8)">${esc(j.nome)}</div>
+        <div style="font-size:12px;margin-top:2px;text-shadow:0 1px 8px rgba(0,0,0,.8)">${esc([j.cidade, j.estado].filter(Boolean).join(', '))}${j.clube ? ' · ' + esc(j.clube) : ''}</div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <span style="font-size:10px;border-radius:6px;padding:3px 9px;background:rgba(255,122,26,.9);color:#fff;font-weight:800;letter-spacing:.06em">CATEGORIA ${esc(j.categoria)}</span>
+          ${j.camisa ? `<span style="font-size:10px;border-radius:6px;padding:3px 9px;background:rgba(0,0,0,.45)">Camisa ${j.camisa}</span>` : ''}
+        </div>
       </div>
     </div>
+    ${(() => {
+      const ficha = [['Idade', j.idade && j.idade + ' anos'],
+        ['Físico', j.altura_cm && `${(j.altura_cm/100).toFixed(2).replace('.',',')} m${j.peso_kg ? ' · ' + j.peso_kg + ' kg' : ''}`],
+        ['Mão / Empunhadura', [j.mao, j.empunhadura].filter(Boolean).join(' · ')],
+        ['Estilo', j.estilo], ['Madeira', j.madeira],
+        ['Borrachas', [j.borracha_fh && 'FH ' + j.borracha_fh, j.borracha_bh && 'BH ' + j.borracha_bh].filter(Boolean).join(' · ')],
+        ['No circuito desde', j.desde], ['Instagram', j.instagram]].filter(([,x]) => x);
+      return ficha.length ? `<div style="padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px 16px">
+        ${ficha.map(([k,x]) => `<div><div class="eyebrow">${esc(k)}</div>
+          <div style="font-weight:600;font-size:12.5px;margin-top:2px;${k==='Instagram'?'color:var(--accl)':''}">${esc(x)}</div></div>`).join('')}
+      </div>` : '';
+    })()}
+    ${j.bio ? `<div style="padding:14px 20px 20px;border-top:1px solid var(--line);font-size:12px;color:var(--mut);line-height:1.6">${esc(j.bio)}</div>` : ''}
+    ${S.isAdmin ? `<div style="padding:0 20px 18px"><button class="btn sm" style="width:100%" data-act="editarJogador" data-id="${j.id}">Editar jogador</button></div>` : ''}
+  </div>`;
 
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
-      <div class="card">
-        <div class="eyebrow" style="margin-bottom:12px">Ficha</div>
-        ${[['Estilo',j.estilo],['Empunhadura',j.empunhadura],['Mão',j.mao],['Idade',j.idade&&j.idade+' anos'],
-           ['Físico',j.altura_cm&&`${(j.altura_cm/100).toFixed(2).replace('.',',')} m · ${j.peso_kg} kg`],
-           ['Madeira',j.madeira],['Borracha FH',j.borracha_fh],['Borracha BH',j.borracha_bh],
-           ['No circuito desde',j.desde],['Instagram',j.instagram]]
-          .filter(([,v]) => v).map(([k,v]) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:13px">
-            <span style="color:var(--mut)">${esc(k)}</span><span style="font-weight:600;text-align:right">${esc(v)}</span></div>`).join('')}
-      </div>
-      <div class="card">
-        <div class="eyebrow" style="margin-bottom:12px">Campanha por etapa</div>
-        ${hist.length ? hist.map(h => {
-          const et = S.etapas.find(e => e.id === h.etapa_id);
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line)">
-            <div><div style="font-size:13px;font-weight:600">${esc(et?.nome || 'Etapa')}</div>
-            <div style="font-size:11px;color:var(--mut)">${esc(et?.cidade||'')} · ${dataBR(et?.data)}</div></div>
-            <div style="text-align:right"><div class="exp" style="font-size:15px">${h.posicao}º</div>
-            <div style="font-size:11px;color:var(--accl)">+${h.pontos} pts</div></div></div>`;
-        }).join('') : `<div style="color:var(--mut);font-size:13px">Sem resultados registrados ainda.</div>`}
+  /* --- kpis --- */
+  const kpis = [['Pontos', j.pontos ?? 0, 'var(--tx)'],
+    ['Jogos', total, 'var(--tx)'],
+    ['Aproveitamento', aprovPct + '%', aprovPct >= 50 ? 'var(--ok)' : 'var(--bad)'],
+    ['Sequência atual', st.seqTipo === null ? '—' : `${st.seqAtual} ${st.seqTipo ? 'V' : 'D'}`, st.seqTipo === false ? 'var(--bad)' : 'var(--ok)']];
+
+  /* --- radar --- */
+  const cx = 100, cy = 84, R = 66;
+  const pt = (i,val) => { const a = -Math.PI/2 + i*2*Math.PI/5, dd = R*val/100; return [cx+dd*Math.cos(a), cy+dd*Math.sin(a)]; };
+  const grade = [33,66,100].map(g => `<polygon points="${eixos.map((_,i) => pt(i,g).join(',')).join(' ')}" fill="none" stroke="rgba(255,255,255,${g===100?'.12':'.06'})"/>`).join('');
+  const cardRadar = `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-weight:700;font-size:13px">Perfil técnico</div>
+      ${S.isAdmin ? `<button class="btn sm ${S.radarEdit?'pri':'gh'}" data-act="toggleRadar" style="padding:4px 10px;font-size:11px">${S.radarEdit?'✓ Pronto':'✎ Editar'}</button>` : ''}
+    </div>
+    ${S.radarEdit && S.isAdmin ? `<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:10px">
+      ${eixos.map((e,i) => `<div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:11px;color:#B9C2D4;width:82px">${esc(e)}</div>
+        <input type="range" min="0" max="100" value="${radar[i]}" data-radar="${i}" style="flex:1;accent-color:#FF7A1A">
+        <div class="exp" style="font-size:12px;width:28px;text-align:right;color:var(--accl)" id="radar-v-${i}">${radar[i]}</div>
+      </div>`).join('')}
+      <button class="btn sm pri" data-act="salvarRadar" data-id="${j.id}" style="margin-top:4px">Salvar perfil técnico</button>
+    </div>` : ''}
+    <svg viewBox="0 0 200 172" style="width:100%;height:150px">
+      ${grade}
+      ${eixos.map((_,i) => `<line x1="${cx}" y1="${cy}" x2="${pt(i,100)[0]}" y2="${pt(i,100)[1]}" stroke="rgba(255,255,255,.06)"/>`).join('')}
+      <polygon id="radar-poly" points="${radar.map((val,i) => pt(i,val).join(',')).join(' ')}" fill="rgba(255,122,26,.25)" stroke="#FF7A1A" stroke-width="2"/>
+      ${eixos.map((e,i) => { const [x,y] = pt(i,128); return `<text x="${x}" y="${y}" fill="#8A94A8" font-size="9" text-anchor="middle" font-family="Archivo">${e}</text>`; }).join('')}
+    </svg>
+  </div>`;
+
+  /* --- donut --- */
+  const deg = total ? st.v * 360 / total : 0;
+  const cardDonut = `<div class="card">
+    <div style="font-weight:700;font-size:13px;margin-bottom:14px">Vitórias × Derrotas</div>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+      <div style="width:116px;height:116px;border-radius:50%;background:conic-gradient(#FF7A1A 0deg ${deg}deg, rgba(255,255,255,.08) ${deg}deg 360deg);display:flex;align-items:center;justify-content:center;flex:none">
+        <div style="width:86px;height:86px;border-radius:50%;background:#101623;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div class="exp" style="font-size:21px">${aprovPct}%</div>
+          <div class="eyebrow">aproveit.</div></div></div>
+      <div style="font-size:12.5px;display:flex;flex-direction:column;gap:9px">
+        <div><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--acc);margin-right:8px"></span>Vitórias <b>${st.v}</b></div>
+        <div><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:rgba(255,255,255,.15);margin-right:8px"></span>Derrotas <b>${st.d}</b></div>
+      </div></div>
+  </div>`;
+
+  /* --- barras por temporada --- */
+  const temps = Object.entries(st.temporadas).sort();
+  const maxT = Math.max(1, ...temps.map(([,n]) => n));
+  const cardTemps = `<div class="card">
+    <div style="font-weight:700;font-size:13px;margin-bottom:14px">Vitórias por temporada</div>
+    ${temps.length ? `<div style="display:flex;align-items:flex-end;gap:12px;height:118px">
+      ${temps.map(([ano,n]) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end">
+        <div style="font-size:11px;color:#B9C2D4">${n}</div>
+        <div style="width:100%;max-width:40px;height:${Math.max(6, n/maxT*100)}%;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#FF7A1A,#B34A10)"></div>
+        <div style="font-size:10px;color:var(--dim)">${esc(ano)}</div></div>`).join('')}
+    </div>` : `<div style="color:var(--mut);font-size:12.5px;height:118px;display:flex;align-items:center">Sem vitórias registradas ainda.</div>`}
+  </div>`;
+
+  /* --- evolução no ranking --- */
+  const ev = st.evolucao;
+  let cardEvo;
+  if(ev.length >= 2){
+    const maxPos = Math.max(...ev.map(x => x.pos), 2);
+    const px = i => ev.length === 1 ? 150 : 8 + i * (284 / (ev.length - 1));
+    const py = p => 12 + (p - 1) / (maxPos - 1 || 1) * 82;
+    const pts = ev.map((x,i) => `${px(i).toFixed(1)},${py(x.pos).toFixed(1)}`).join(' ');
+    cardEvo = `<div class="card">
+      <div style="font-weight:700;font-size:13px;margin-bottom:6px">Evolução no ranking</div>
+      <svg viewBox="0 0 300 110" style="width:100%;height:112px">
+        <polygon points="8,108 ${pts} ${px(ev.length-1).toFixed(1)},108" fill="rgba(255,122,26,.12)"/>
+        <polyline points="${pts}" fill="none" stroke="#FF7A1A" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${ev.map((x,i) => `<circle cx="${px(i).toFixed(1)}" cy="${py(x.pos).toFixed(1)}" r="3" fill="#FF7A1A"/>`).join('')}
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim)">
+        ${ev.map(x => `<span>Et. ${x.etapa.numero}/${String(x.etapa.temporada).slice(-2)} · ${x.pos}º</span>`).join('')}
+      </div></div>`;
+  } else {
+    cardEvo = `<div class="card"><div style="font-weight:700;font-size:13px;margin-bottom:6px">Evolução no ranking</div>
+      <div style="color:var(--mut);font-size:12.5px;height:112px;display:flex;align-items:center">O gráfico aparece a partir da segunda etapa disputada.</div></div>`;
+  }
+
+  /* --- números --- */
+  const numeros = [['Sets ganhos', st.sg], ['Sets perdidos', st.sp], ['Saldo de sets', (st.sg-st.sp > 0 ? '+' : '') + (st.sg-st.sp)],
+    ['Pontos ganhos', st.pg.toLocaleString('pt-BR')], ['Pontos sofridos', st.ps.toLocaleString('pt-BR')], ['Maior seq. V', st.maiorV]];
+  const cardNumeros = `<div class="card">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(102px,1fr));gap:10px">
+      ${numeros.map(([k,val]) => `<div style="text-align:center;padding:9px 4px;background:rgba(255,255,255,.02);border-radius:8px">
+        <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">${esc(k)}</div>
+        <div class="exp" style="font-size:15px;margin-top:3px">${esc(val)}</div></div>`).join('')}
+    </div></div>`;
+
+  /* --- últimos jogos --- */
+  const ult = st.jogos.slice(-10).reverse();
+  const badge = ok => `<span style="width:20px;height:20px;border-radius:6px;background:${ok?'var(--ok)':'rgba(255,255,255,.14)'};color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">${ok?'V':'D'}</span>`;
+  const cardJogos = `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:12px;flex-wrap:wrap">
+      <div style="font-weight:700;font-size:13px">Últimos 10 jogos</div>
+      <div style="display:flex;gap:4px">${[...ult].reverse().map(g => badge(g.ganhei)).join('')}</div>
+    </div>
+    ${ult.length ? ult.map(g => {
+      const e = S.etapas.find(x => x.id === g.p.etapa_id);
+      return `<div class="clickable" data-perfil="${g.adv}" style="display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:9px;font-size:12.5px;cursor:pointer">
+        ${badge(g.ganhei)}
+        <div style="flex:1;min-width:0">vs <b>${esc(nome(g.adv))}</b><span style="color:var(--dim)"> · ${e ? esc(e.nome || 'Etapa '+e.numero) + ' · ' : ''}${esc(FASES[g.p.fase])}</span></div>
+        <div class="exp" style="font-size:13px">${g.meus} × ${g.dele}</div>
+        <div style="color:var(--dim);font-size:11px;text-align:right;min-width:96px">${g.parciais.map(([a,b]) => a+'-'+b).join(' · ')}</div>
+      </div>`;
+    }).join('') : `<div style="color:var(--mut);font-size:12.5px;padding:8px 0">Nenhuma partida finalizada ainda.</div>`}
+  </div>`;
+
+  /* --- histórico de etapas --- */
+  const cardEtapas = `<div class="card">
+    <div style="font-weight:700;font-size:13px;margin-bottom:10px">Histórico de etapas</div>
+    ${st.porEtapa.length ? `<div class="scroller">${st.porEtapa.map(x => `
+      <div style="display:grid;grid-template-columns:74px 1fr 78px 46px 46px 74px;align-items:center;gap:8px;padding:10px 6px;font-size:12.5px;border-top:1px solid var(--line);min-width:420px">
+        <div style="color:var(--mut);font-weight:700">${esc(x.e?.nome || 'Etapa')}</div>
+        <div style="font-weight:700">${x.r.posicao}º lugar<span style="color:var(--dim);font-weight:400"> · ${esc(x.e?.cidade || '')}</span></div>
+        <div class="exp" style="color:var(--accl)">+${x.r.pontos} pts</div>
+        <div style="color:var(--ok)">${x.v} V</div>
+        <div style="color:var(--mut)">${x.d} D</div>
+        <div style="color:#B9C2D4">sets ${x.ss > 0 ? '+' : ''}${x.ss}</div>
+      </div>`).join('')}</div>`
+    : `<div style="color:var(--mut);font-size:12.5px">Sem resultados de etapa registrados.</div>`}
+  </div>`;
+
+  return `<div class="screen">
+    <button class="btn sm gh" data-go="jogadores" style="margin-bottom:14px">← Voltar para jogadores</button>
+    <div class="perfil-grid">
+      <div class="perfil-card">${cardFoto}</div>
+      <div class="grid" style="gap:14px;align-content:start">
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(128px,1fr))">
+          ${kpis.map(([l,val,c]) => `<div class="kpi"><div class="eyebrow">${esc(l)}</div><div class="v" style="color:${c};font-size:22px">${esc(val)}</div></div>`).join('')}
+        </div>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(270px,1fr))">${cardDonut}${cardRadar}</div>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(270px,1fr))">${cardTemps}${cardEvo}</div>
+        ${cardNumeros}
+        ${cardJogos}
+        ${cardEtapas}
       </div>
     </div>
+    ${st.semJogos ? `<div style="font-size:11.5px;color:var(--dim);margin-top:14px;text-align:center">Vitórias e derrotas vêm do cadastro enquanto não houver partidas registradas no sistema.</div>` : ''}
   </div>`;
 }
 
@@ -1148,6 +1343,27 @@ async function gerarChave(cat){
 
 
 
+
+async function salvarRadar(id){
+  const vals = [...document.querySelectorAll('[data-radar]')]
+    .sort((a,b) => a.dataset.radar - b.dataset.radar).map(el => parseInt(el.value,10));
+  if(vals.length !== 5) return;
+  const { error } = await sb.from('jogadores').update({ radar: vals }).eq('id', id);
+  if(error) return erro(error);
+  const j = jog(id); if(j) j.radar = vals;
+  S.radarEdit = false; render(); toast('Perfil técnico atualizado.');
+}
+function preverRadar(){
+  const vals = [...document.querySelectorAll('[data-radar]')]
+    .sort((a,b) => a.dataset.radar - b.dataset.radar).map(el => parseInt(el.value,10));
+  if(vals.length !== 5) return;
+  const cx = 100, cy = 84, R = 66;
+  const pts = vals.map((v,i) => { const a = -Math.PI/2 + i*2*Math.PI/5, d = R*v/100;
+    return `${(cx+d*Math.cos(a)).toFixed(1)},${(cy+d*Math.sin(a)).toFixed(1)}`; }).join(' ');
+  $('#radar-poly')?.setAttribute('points', pts);
+  vals.forEach((v,i) => { const el = $('#radar-v-'+i); if(el) el.textContent = v; });
+}
+
 /* ---------- upload de foto ---------- */
 function comprimirImagem(file, lado = 640){
   return new Promise((resolve, reject) => {
@@ -1459,10 +1675,9 @@ document.addEventListener('click', async e => {
 
   if(el.dataset.go) return irPara(el.dataset.go);
   if(el.dataset.perfil && !el.dataset.act){
-    S.perfilId = el.dataset.perfil;
-    const r = await sb.from('resultados_etapa').select('*').eq('jogador_id', S.perfilId);
-    S.resultados = r.data || [];
-    return irPara('perfil', { perfilId: el.dataset.perfil });
+    S.radarEdit = false;
+    irPara('perfil', { perfilId: el.dataset.perfil });
+    return carregarPerfil(el.dataset.perfil).then(render);
   }
   if(el.dataset.etapa){ S.etapaSel = el.dataset.etapa; await carregarResultados(el.dataset.etapa); return render(); }
   if(el.dataset.cat && !el.dataset.act){ S.cat = el.dataset.cat; return render(); }
@@ -1507,12 +1722,15 @@ document.addEventListener('click', async e => {
     toggleEditChave:  () => { S.editChave = !S.editChave; render(); },
     escolherFoto:     () => { $('#jf-arquivo')?.click(); },
     removerFoto:      () => { capturarFormJogador(); S.modal.dados.foto_url = ''; renderOverlay(); },
+    toggleRadar:      () => { S.radarEdit = !S.radarEdit; render(); },
+    salvarRadar:      () => salvarRadar(id),
   };
   if(acoes[a]) await acoes[a]();
 });
 
 document.addEventListener('input', e => {
   if(e.target.id === 'busca'){ S.busca = e.target.value; renderView(); $('#busca')?.focus(); }
+  if(e.target.dataset?.radar !== undefined){ return preverRadar(); }
   if(e.target.id === 'busca-modal'){
     S.buscaModal = e.target.value; const pos = e.target.selectionStart;
     renderOverlay(); const c = $('#busca-modal'); if(c){ c.focus(); c.setSelectionRange(pos,pos); }
@@ -1597,6 +1815,8 @@ function ligarRealtime(){
     if(!location.hash) S.screen = S.isAdmin ? 'dashboard' : 'publico';
     if(TELAS[S.screen] && !TELAS[S.screen].pub && !S.isAdmin) S.screen = 'publico';
     S.loading = false;
+    render();
+    if(S.screen === 'perfil' && S.perfilId) await carregarPerfil(S.perfilId);
     render();
     ligarRealtime();
   } catch(err){
